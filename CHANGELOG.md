@@ -2,6 +2,16 @@
 
 本文件记录 dsh-collaboration 各版本的变更（遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 精神）。
 
+## [v0.2.0] - 2026-08-14
+
+### 新增
+
+- **持久专家团队（实时协作）**：
+  - `@dsh-collaboration/team` 0.2.0：名册身份升级为模板 + **实时实例注册表**。`spawn` 雇佣持久专家实例（continuable 子代理，label `team:<identityId>#<n>` 为持久真相，重启后可恢复识别）；`followup` 主→专家追问；`close` 解散；`instances`/`workingSet` 实时状态。
+  - `@dsh-collaboration/tool-team` 0.2.0：`team_call` 默认雇佣持久实例，`instances` 参数支持**同一身份多分身**（reviewer#1/#2…），`wait: true` 保留 v0.1 一次性阻塞语义；新增 `team_message`（星型拓扑：专家间通信经主代理中转）、`team_status`（团队面板）、`team_close`（解散）；系统提示段升级为「名册 + 在线实例 + 控制台指引」。
+- **通信模型（星型）**：主代理为枢纽——专家用内置 `report` 汇报、结算时自动通知主代理；专家 ↔ 专家经主代理转发，不直连。
+- 验证：mock 单测（五工具、分身、边界守卫）+ 活体探针（真实 startContinuable / followup / listChildren 标签 / interrupt 全链路）。
+
 ## [v0.1.2] - 2026-08-14
 
 ### 修复

@@ -43,8 +43,8 @@ Inspired by the multi-agent workbench idea of [oh-my-openagent](https://github.c
 
 | Feature | Package | Notes |
 |---|---|---|
-| 🧑‍🤝‍🧑 Specialist roster | `@dsh-collaboration/team` | Ten pre-defined identities (main/planner/coder/debugger/reviewer/researcher/critic/writer/looker/painter), each with a duty; per-identity models configured in `settings.yaml`, applied **live**; empty = follow the session model |
-| 🎯 On-demand dispatch | `@dsh-collaboration/tool-team` | `team_call` sends one named specialist a task (runs as a subagent with its persona and model); `roundtable` convenes several in parallel; the roster is surfaced to the main agent in its system prompt |
+| 🧑‍🤝‍🧑 Specialist roster | `@dsh-collaboration/team` | Ten pre-defined identities (main/planner/coder/debugger/reviewer/researcher/critic/writer/looker/painter), each with a duty; per-identity models configured in `settings.yaml`, applied **live**; empty = follow the session model. Since v0.2 identities are templates that can be hired as PERSISTENT specialist instances (with clones) |
+| 🎯 Team console | `@dsh-collaboration/tool-team` | `team_call` hires persistent specialists (`instances` clones one identity); `team_message` follow-ups/relays (star topology); `team_status` live board; `team_close` dismisses; `roundtable` one-shot parallel panel |
 | ⚖️ Model comparison | `@dsh-collaboration/tool-model-compare` | One prompt to several models in parallel, answers side by side |
 | 👁️ Vision bridge | `@dsh-collaboration/tool-vision` | A text-only main agent sends images to a vision-capable model and works from the text analysis |
 | 🎁 One-line preset | `config/agent-presets/collaboration` | Full `standard` toolset + the tools above (display name: 协同模式 / Collaboration Mode) |
@@ -59,8 +59,9 @@ collaboration-team roster (settings.yaml)  ←──  each identity: duty + opti
         │  host service collaborationTeam
         ▼
 Main agent (Collaboration preset)
-  ├─ team_call     → name one specialist → subagent (its persona + its model) → answer back
-  ├─ roundtable    → several specialists in parallel → main agent chairs the synthesis
+  ├─ team_call     → hire persistent specialist instances (with clones) → report / settlement notices
+  ├─ team_message  → follow up or relay to any instance (specialist-to-specialist goes through you)
+  ├─ team_status   → live team board; team_close → dismiss an instance
   ├─ model_compare → same prompt across models, side by side
   └─ vision        → images to a vision model → text analysis back
 ```
@@ -131,8 +132,9 @@ collaboration-team:
 ## Usage examples
 
 ```
-Use team_call to have reviewer audit my auth module and flag security risks.
-Send docs/screenshot.png to looker and describe the UI issues.
+Hire two reviewer clones to audit the auth module and the payments module.
+Follow up with team_message: ask reviewer#1 about session-fixation attacks.
+Relay critic's objection to planner via team_message.
 Run a roundtable (planner, reviewer, critic) on "should we split the monolith".
 Compare deepseek-v4-pro and zhipu/glm-4.5 on the same prompt with model_compare.
 ```

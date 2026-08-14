@@ -1,15 +1,27 @@
 # @dsh-collaboration/team
 
-专家名册宿主包 —— 预设一组各司其职的身份，每个身份绑定自己的模型，全部由用户在 `settings.yaml` 中配置。
+专家名册 + 实时团队注册表宿主包 —— 预设一组各司其职的身份（模板），运行时雇佣为**持久专家实例**（continuable 子代理），每个身份绑定自己的模型，全部由用户在 `settings.yaml` 中配置。
 
 ## 安装
 
-`cordis.patch.yml` 插入（与适配器行并列）：
+`cordis.patch.yml` 插入：
 
 ```yaml
     - id: collaboration-team
       name: '@dsh-collaboration/team'
 ```
+
+## 服务接口（collaborationTeam）
+
+| 方法 | 行为 |
+|---|---|
+| `roster()` / `resolve(id)` / `configured(agent)` | 名册查询（模板层） |
+| `spawn(parent, identityId, task, opts)` | **雇佣一个持久实例**（同一身份可多次雇佣 → reviewer#1、reviewer#2… 分身） |
+| `followup(parent, instanceId, message)` | 主代理 → 实例追问（星型拓扑的中转也走它） |
+| `close(parent, instanceId)` | 打断实例当前回合 |
+| `instances(parent)` / `workingSet()` | 实例状态（working/settled；workingset 为同步快照，供提示段） |
+
+实例以 continuable 子代理实现：label 为 `team:<identityId>#<n>`（持久真相），进程内注册表为缓存；重启后由 label 自动恢复识别。专家用内置 `report` 工具汇报，结算时主代理自动收到通知。
 
 ## 默认名册
 

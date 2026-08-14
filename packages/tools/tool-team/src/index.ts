@@ -1,17 +1,23 @@
 /**
- * `@dsh-collaboration/tool-team`: on-demand specialist dispatch for the main agent.
+ * `@dsh-collaboration/tool-team`: the main agent's team console.
  *
- * Reads the user-configured roster from the host `collaborationTeam` service
- * (the `@dsh-collaboration/team` row) and registers two model-facing tools:
+ * Reads the user-configured roster AND the live instance registry from the
+ * host `collaborationTeam` service (the `@dsh-collaboration/team` row) and
+ * registers the team tools:
  *
- *   - `team_call`:  point one NAMED specialist at a task. The specialist runs
- *     as a one-shot subagent with its own persona; it follows the session
- *     model unless the roster pins a provider/model for it.
- *   - `roundtable`: convene several (default: all non-main) specialists on
- *     one topic in parallel; the main agent chairs the synthesis.
+ *   - `team_call`:   hire one or more PERSISTENT specialist instances from a
+ *     roster identity (`instances` clones the same identity for parallel
+ *     tasks); `wait: true` degrades to the v0.1 foreground one-shot.
+ *   - `team_message`: main → instance follow-up (STAR topology: specialist
+ *     ↔ specialist talk is relayed through the main agent).
+ *   - `team_status`:  live instance board (who is working / settled).
+ *   - `team_close`:   interrupt one instance.
+ *   - `roundtable`:   unchanged one-shot parallel panel.
  *
- * A system-prompt section renders the live roster at every assembly so the
- * main agent knows who exists, what each one does, and which model each runs.
+ * Specialists answer through their built-in `report` tool and the
+ * continuation manager notifies the main agent when an instance settles.
+ * A system-prompt section renders the live roster plus the current working
+ * set at every assembly.
  * @module @dsh-collaboration/tool-team
  */
 import z from '@deepseek-ai/schemastery'
@@ -47,37 +53,56 @@ interface AgentRef {
   maxTokens?: number
 }
 
+interface InstanceRef {
+  instanceId: string
+  identityId: string
+  name: string
+  childId: string
+  label: string
+  createdAt: number
+  status?: 'working' | 'settled'
+}
+
 const TEAM_CALL_DESCRIPTION =
-  'Call ONE named specialist from the team roster to handle a task, and get its answer back. ' +
-  'Use this whenever the current work needs a specific expertise you do not have: point `agent` at the ' +
-  'specialist id (e.g. reviewer for a security pass, looker for anything visual, debugger for a stuck bug). ' +
-  'The specialist runs with its own duty and persona; one without a pinned model follows the session ' +
-  'model, while a pinned one (settings.yaml collaboration-team) runs on its own provider/model. ' +
-  'You receive its final statement and stay in charge of the overall task. Pick the SINGLE best specialist ' +
-  'per call; use `roundtable` when you want several perspectives at once.'
+  'Hire one or more PERSISTENT specialists from the team roster. Each hired instance becomes a long-lived ' +
+  'background teammate with its own session: it works on its task, reports its conclusion via `report`, and ' +
+  'you get a settlement notice when it finishes. Use `team_message` to follow up, ask it to revise, or give it ' +
+  'more work; use `team_status` for the live board; use `team_close` to dismiss one. Set `instances` > 1 to hire ' +
+  'several clones of the SAME identity for different tasks (they get ids like reviewer#1, reviewer#2). ' +
+  'A specialist without a pinned model follows the session model, a pinned one runs on its own provider/model. ' +
+  'For a quick one-off answer with no follow-up, pass `wait: true` — the call then blocks and returns the ' +
+  'specialist\'s answer directly (instances must be 1).'
+
+const TEAM_MESSAGE_DESCRIPTION =
+  'Send one message from you (the main agent) to a hired specialist instance, e.g. "reviewer#1". The instance ' +
+  'wakes up and answers with its report tool. This is the STAR relay: specialists do not message each other ' +
+  'directly — if one specialist needs another, YOU forward the message with this tool.'
+
+const TEAM_STATUS_DESCRIPTION =
+  'Show the live team board: every hired specialist instance (id, identity, status working/settled). ' +
+  'Use it before messaging or closing an instance, or when you are unsure who is still around.'
+
+const TEAM_CLOSE_DESCRIPTION =
+  'Dismiss (interrupt) one hired specialist instance by its instance id (e.g. reviewer#1). Its current turn ' +
+  'stops; the instance stops appearing as working.'
 
 const ROUNDTABLE_DESCRIPTION =
   'Convene several specialists from the team roster IN PARALLEL on one topic and collect their statements. ' +
   'You are the chair: after this tool returns, synthesize the statements into one verdict in your own answer. ' +
-  'Omit `agents` to convene every configured specialist. One failing specialist does not fail the round.'
+  'Omit `agents` to convene every specialist. One failing specialist does not fail the round.'
 
-function buildPrompt(agent: AgentRef, task: string, extra: string | undefined): string {
-  const lines = [
-    `你是主代理团队中的专项专家：${agent.name}（${agent.id}）。`,
-    `你的职责：${agent.role}`,
-  ]
-  if (agent.persona !== undefined && agent.persona.length > 0) lines.push(`你的行事风格：${agent.persona}`)
-  lines.push(``, `任务：${task}`)
-  if (extra !== undefined && extra.trim().length > 0) lines.push(``, `背景与要求：${extra}`)
-  lines.push(``, `直接给出你的专业结论，简洁、具体、可执行。回复语言跟随任务所用语言。`)
-  return lines.join('\n')
+function formatRosterIds(roster: AgentRef[]): string {
+  return roster.map((agent) => agent.id).join(', ')
 }
 
-function renderRoster(roster: AgentRef[]): string {
+function renderTeam(roster: AgentRef[], working: InstanceRef[]): string {
   const lines: string[] = [
-    '## 专家团队名册（dsh-collaboration）',
-    '你是团队主代理。需要专项能力时，用 `team_call` 点名一位专家；需要多视角评估时，用 `roundtable` 召集多位专家并行发言。',
-    '当前名册：',
+    '## 专家团队（dsh-collaboration）',
+    '你是团队主代理。hire 专家用 `team_call`（`instances` 可雇佣多个分身）；跟进/追问用 `team_message`；' +
+      '查看谁在线用 `team_status`；解雇用 `team_close`。专家完成任务会用 report 汇报，结算时你会收到通知。' +
+      '专家之间不直接通话——需要转达就用 `team_message` 以你的名义转发。',
+    '',
+    '名册（模板）：',
   ]
   for (const agent of roster) {
     const model =
@@ -88,11 +113,13 @@ function renderRoster(roster: AgentRef[]): string {
           : '（跟随主模型；可在 settings.yaml 的 collaboration-team 段单独指定）'
     lines.push(`- ${agent.id} — ${agent.name}${model}：${agent.role}`)
   }
+  if (working.length > 0) {
+    lines.push('', '当前在线实例：')
+    for (const instance of working) {
+      lines.push(`- ${instance.instanceId}（${instance.name}，${instance.status ?? 'working'}）`)
+    }
+  }
   return lines.join('\n')
-}
-
-function formatRosterIds(roster: AgentRef[]): string {
-  return roster.map((agent) => agent.id).join(', ')
 }
 
 export function apply(ctx: any, config: RawConfig) {
@@ -114,9 +141,16 @@ export function apply(ctx: any, config: RawConfig) {
     return found
   }
 
-  const runOne = async (agent: AgentRef, prompt: string, exec: ToolRunContext) => {
+  const requireParent = (exec: ToolRunContext) => {
     const parent = exec.agent
     if (parent === undefined) throw new Error('team tools require an owning agent session')
+    return parent
+  }
+
+  /** v0.1 one-shot foreground path (wait mode). */
+  const runOne = async (agent: AgentRef, task: string, extra: string | undefined, exec: ToolRunContext) => {
+    const parent = requireParent(exec)
+    const prompt = ctx.collaborationTeam.promptFor(agent, task, extra)
     let run: SubagentRun
     try {
       run = await ctx.subagents.start(providerName, {
@@ -159,7 +193,10 @@ export function apply(ctx: any, config: RawConfig) {
     systemPrompt.section({
       name: 'dsh-collaboration:team-roster',
       order: 150,
-      text: () => renderRoster(roster()),
+      text: () => {
+        const working = Array.isArray(ctx.collaborationTeam.workingSet?.()) ? ctx.collaborationTeam.workingSet() : []
+        return renderTeam(roster(), working)
+      },
     })
   }
 
@@ -171,7 +208,7 @@ export function apply(ctx: any, config: RawConfig) {
         agent: {
           type: 'string',
           required: true,
-          description: 'The specialist id from the team roster (e.g. reviewer, debugger, looker, painter).',
+          description: 'The specialist identity id from the team roster (e.g. reviewer, debugger, looker, painter).',
         },
         task: {
           type: 'string',
@@ -182,31 +219,206 @@ export function apply(ctx: any, config: RawConfig) {
           type: 'string',
           description: 'Optional extra context the specialist needs (files, constraints, prior discussion).',
         },
+        instances: {
+          type: 'integer',
+          description: 'How many clones of this identity to hire (default 1). Each clone gets its own task session and an id like reviewer#1, reviewer#2. Only meaningful when wait is false.',
+        },
+        wait: {
+          type: 'boolean',
+          description: 'true = one-shot foreground call that blocks and returns the answer (instances must be 1); false (default) = hire persistent background specialists and get instance ids back.',
+        },
       },
       output: {
         schema: {
           type: 'object',
           additionalProperties: false,
           properties: {
-            agent: { type: 'string', required: true },
-            answer: { type: 'string', required: true },
+            instances: {
+              type: 'array',
+              required: true,
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  instanceId: { type: 'string', required: true },
+                  name: { type: 'string', required: true },
+                },
+              },
+            },
+            answer: { type: 'string' },
           },
         },
-        render: (_args, value: any) => [{ type: 'text', text: value.answer }],
+        render: (_args, value: any) => {
+          if (value.answer !== undefined && value.answer.length > 0) {
+            return [{ type: 'text', text: value.answer }]
+          }
+          const ids = value.instances.map((entry: any) => entry.instanceId).join(', ')
+          return [{ type: 'text', text: `已雇佣专家实例：${ids}。他们会用 report 汇报，完成后你会收到通知；用 team_message 跟进，team_status 看状态。` }]
+        },
       },
       timeoutMs: 900000,
       isConcurrencySafe: () => true,
-      async execute(args: { agent: string; task: string; context?: string }, exec: ToolRunContext) {
+      async execute(args: { agent: string; task: string; context?: string; instances?: number; wait?: boolean }, exec: ToolRunContext) {
+        const parent = requireParent(exec)
         const agent = resolveAgent(args.agent)
-        const answer = await runOne(agent, buildPrompt(agent, args.task, args.context), exec)
-        return { agent: agent.id, answer }
+        const instances = args.instances ?? 1
+        if (!Number.isInteger(instances) || instances < 1 || instances > 10) {
+          throw new Error('team_call: instances 必须是 1-10 的整数')
+        }
+        if (args.wait === true) {
+          if (instances !== 1) throw new Error('team_call: wait 模式只能雇佣 1 个实例')
+          const answer = await runOne(agent, args.task, args.context, exec)
+          return { instances: [{ instanceId: agent.id, name: agent.name }], answer }
+        }
+        const hired: { instanceId: string; name: string }[] = []
+        for (let i = 0; i < instances; i++) {
+          const record = await ctx.collaborationTeam.spawn(parent, agent.id, args.task, {
+            ...(args.context !== undefined ? { context: args.context } : {}),
+            signal: exec.signal,
+          })
+          hired.push({ instanceId: record.instanceId, name: record.name })
+        }
+        return { instances: hired }
       },
       presentCall: (args: any) => ({
         card: 'generic',
-        title: `调用专家：${args.agent}`,
+        title: `雇佣专家：${args.agent}${args.instances !== undefined && args.instances > 1 ? ` ×${args.instances}` : ''}`,
         kind: 'other',
         rawInput: { task: args.task },
       }),
+    }),
+  )
+
+  ctx.tools.register(
+    defineTool({
+      name: 'team_message',
+      description: TEAM_MESSAGE_DESCRIPTION,
+      parameters: {
+        to: {
+          type: 'string',
+          required: true,
+          description: 'The specialist instance id (e.g. reviewer#1). Check team_status for live ids.',
+        },
+        message: {
+          type: 'string',
+          required: true,
+          description: 'The follow-up message (question, revision request, or a relayed message from another specialist).',
+        },
+      },
+      output: {
+        schema: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            instanceId: { type: 'string', required: true },
+            delivered: { type: 'boolean', required: true },
+          },
+        },
+        render: (_args, value: any) => [
+          { type: 'text', text: value.delivered ? `已发送给 ${value.instanceId}。` : `发送给 ${value.instanceId} 失败。` },
+        ],
+      },
+      timeoutMs: 60000,
+      isConcurrencySafe: () => true,
+      async execute(args: { to: string; message: string }, exec: ToolRunContext) {
+        const parent = requireParent(exec)
+        try {
+          await ctx.collaborationTeam.followup(parent, args.to, args.message, exec.signal)
+          return { instanceId: args.to, delivered: true }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          throw new Error(message)
+        }
+      },
+      presentCall: (args: any) => ({
+        card: 'generic',
+        title: `发消息给 ${args.to}`,
+        kind: 'other',
+        rawInput: { message: args.message },
+      }),
+    }),
+  )
+
+  ctx.tools.register(
+    defineTool({
+      name: 'team_status',
+      description: TEAM_STATUS_DESCRIPTION,
+      parameters: {},
+      output: {
+        schema: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            instances: {
+              type: 'array',
+              required: true,
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  instanceId: { type: 'string', required: true },
+                  name: { type: 'string', required: true },
+                  identityId: { type: 'string', required: true },
+                  status: { type: 'string', required: true },
+                },
+              },
+            },
+          },
+        },
+        render: (_args, value: any) => {
+          if (value.instances.length === 0) return [{ type: 'text', text: '当前没有雇佣任何专家实例。' }]
+          const lines = value.instances.map((entry: any) => `- ${entry.instanceId}（${entry.name}）：${entry.status}`)
+          return [{ type: 'text', text: `在线专家（${value.instances.length}）：\n` + lines.join('\n') }]
+        },
+      },
+      timeoutMs: 30000,
+      isConcurrencySafe: () => true,
+      async execute(_args: {}, exec: ToolRunContext) {
+        const parent = requireParent(exec)
+        const views = await ctx.collaborationTeam.instances(parent)
+        return {
+          instances: views.map((entry: InstanceRef) => ({
+            instanceId: entry.instanceId,
+            name: entry.name,
+            identityId: entry.identityId,
+            status: entry.status ?? 'working',
+          })),
+        }
+      },
+      presentCall: () => ({ card: 'generic', title: '团队状态', kind: 'other', rawInput: {} }),
+    }),
+  )
+
+  ctx.tools.register(
+    defineTool({
+      name: 'team_close',
+      description: TEAM_CLOSE_DESCRIPTION,
+      parameters: {
+        instance: {
+          type: 'string',
+          required: true,
+          description: 'The specialist instance id to dismiss (e.g. reviewer#1).',
+        },
+      },
+      output: {
+        schema: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            instanceId: { type: 'string', required: true },
+            closed: { type: 'boolean', required: true },
+          },
+        },
+        render: (_args, value: any) => [{ type: 'text', text: `已请求解雇 ${value.instanceId}。` }],
+      },
+      timeoutMs: 30000,
+      isConcurrencySafe: () => true,
+      async execute(args: { instance: string }, exec: ToolRunContext) {
+        const parent = requireParent(exec)
+        ctx.collaborationTeam.close(parent, args.instance)
+        return { instanceId: args.instance, closed: true }
+      },
+      presentCall: (args: any) => ({ card: 'generic', title: `解雇 ${args.instance}`, kind: 'other', rawInput: {} }),
     }),
   )
 
@@ -284,7 +496,7 @@ export function apply(ctx: any, config: RawConfig) {
         const statements = await Promise.all(
           selected.map(async (agent) => {
             try {
-              const text = await runOne(agent, buildPrompt(agent, `圆桌议题：${args.topic}`, args.background), exec)
+              const text = await runOne(agent, `圆桌议题：${args.topic}`, args.background, exec)
               return { id: agent.id, name: agent.name, provider: agent.provider ?? '', model: agent.model ?? '', text }
             } catch (error) {
               const message = error instanceof Error ? error.message : String(error)

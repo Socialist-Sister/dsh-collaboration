@@ -26,12 +26,29 @@ const ROSTER = [
 ]
 
 function makeMockCtx() {
-  const captured = { tools: [], promptSections: [] }
+  const captured = { tools: [], promptSections: [], hired: [] }
   const ctx = {
     collaborationTeam: {
       roster: () => ROSTER,
       resolve: (id) => ROSTER.find((agent) => agent.id === id),
       configured: (agent) => agent.id === 'main' || (agent.provider !== undefined && agent.model !== undefined),
+      promptFor: (agent, task) => `prompt:${agent.id}:${task}`,
+      spawn: async (_parent, identityId, task) => {
+        const record = {
+          instanceId: `${identityId}#${captured.hired.length + 1}`,
+          identityId,
+          name: identityId,
+          childId: `child-${captured.hired.length + 1}`,
+          label: `team:${identityId}#${captured.hired.length + 1}`,
+          createdAt: 1,
+        }
+        captured.hired.push({ identityId, task })
+        return record
+      },
+      followup: async () => ({ instanceId: 'x', messageId: 'm1' }),
+      close: () => {},
+      instances: async () => [],
+      workingSet: () => [],
     },
     tools: {
       register(definition) {
@@ -104,37 +121,56 @@ console.log('== @dsh-collaboration/tool-team ==')
 {
   const { ctx, captured } = makeMockCtx()
   applyTeam(ctx, presetConfig.team)
-  assert(captured.tools.length === 2, `registered two tools (${captured.tools.length})`)
+  assert(captured.tools.length === 5, `registered five tools (${captured.tools.length})`)
   const names = captured.tools.map((tool) => tool.name).sort()
-  assert(names.join(',') === 'roundtable,team_call', `tool names are team_call+roundtable (${names.join(',')})`)
+  assert(names.join(',') === 'roundtable,team_call,team_close,team_message,team_status', `tool names are the v0.2 console (${names.join(',')})`)
 
   assert(captured.promptSections.length === 1, 'one system-prompt section registered')
   const section = captured.promptSections[0]
   if (section !== undefined) {
-    assert(section.name !== undefined && section.order === 150, 'roster section at order 150')
+    assert(section.name !== undefined && section.order === 150, 'team section at order 150')
     const text = typeof section.text === 'function' ? section.text({}) : section.text
-    assert(text.includes('planner') && text.includes('跟随主模型') && text.includes('looker'), 'roster text renders identities and follow-model state')
+    assert(text.includes('planner') && text.includes('跟随主模型') && text.includes('team_message'), 'team section renders roster, follow-model state and console guidance')
   }
 
   const teamCall = captured.tools.find((tool) => tool.name === 'team_call')
-  const exec = { signal: new AbortController().signal }
+  const noAgentExec = { signal: new AbortController().signal }
+  const agentExec = { agent: { session: { id: 's1' } }, signal: new AbortController().signal }
 
-  const unknown = await teamCall.execute({ agent: 'nobody', task: 'x' }, exec).catch((e) => e)
+  const unknown = await teamCall.execute({ agent: 'nobody', task: 'x' }, agentExec).catch((e) => e)
   assert(unknown instanceof Error && /未知专家/.test(unknown.message) && unknown.message.includes('planner'), 'team_call: unknown id lists roster')
 
-  // An identity without a pinned model FOLLOWS the session model — it no
-  // longer errors at resolution; it proceeds to the agent guard instead.
-  const followModel = await teamCall.execute({ agent: 'looker', task: 'x' }, exec).catch((e) => e)
-  assert(followModel instanceof Error && /owning agent/.test(followModel.message), 'team_call: empty model follows session (agent guard, not config error)')
-
-  const noAgent = await teamCall.execute({ agent: 'planner', task: 'x' }, exec).catch((e) => e)
+  const noAgent = await teamCall.execute({ agent: 'planner', task: 'x' }, noAgentExec).catch((e) => e)
   assert(noAgent instanceof Error && /owning agent/.test(noAgent.message), 'team_call: missing agent guarded')
 
+  // Persistent mode hires instances through the service (multi-clone supported).
+  const hired = await teamCall.execute({ agent: 'reviewer', task: '审查 X', instances: 3 }, agentExec)
+  assert(hired.instances.length === 3 && hired.instances[0].instanceId === 'reviewer#1' && hired.instances[2].instanceId === 'reviewer#3', 'team_call: three clone instances hired')
+  assert(captured.hired.length === 3, 'team_call: spawn called once per clone')
+
+  const badRange = await teamCall.execute({ agent: 'reviewer', task: 'x', instances: 11 }, agentExec).catch((e) => e)
+  assert(badRange instanceof Error && /1-10/.test(badRange.message), 'team_call: instance count bounded')
+
+  const badWait = await teamCall.execute({ agent: 'reviewer', task: 'x', wait: true, instances: 2 }, agentExec).catch((e) => e)
+  assert(badWait instanceof Error && /wait/.test(badWait.message), 'team_call: wait mode refuses clones')
+
+  const teamMessage = captured.tools.find((tool) => tool.name === 'team_message')
+  const msgNoAgent = await teamMessage.execute({ to: 'reviewer#1', message: 'hi' }, noAgentExec).catch((e) => e)
+  assert(msgNoAgent instanceof Error && /owning agent/.test(msgNoAgent.message), 'team_message: missing agent guarded')
+
+  const teamStatus = captured.tools.find((tool) => tool.name === 'team_status')
+  const statusNoAgent = await teamStatus.execute({}, noAgentExec).catch((e) => e)
+  assert(statusNoAgent instanceof Error && /owning agent/.test(statusNoAgent.message), 'team_status: missing agent guarded')
+
+  const teamClose = captured.tools.find((tool) => tool.name === 'team_close')
+  const closeNoAgent = await teamClose.execute({ instance: 'reviewer#1' }, noAgentExec).catch((e) => e)
+  assert(closeNoAgent instanceof Error && /owning agent/.test(closeNoAgent.message), 'team_close: missing agent guarded')
+
   const roundtable = captured.tools.find((tool) => tool.name === 'roundtable')
-  const emptyPanel = await roundtable.execute({ topic: 't', agents: ['main'] }, exec).catch((e) => e)
+  const emptyPanel = await roundtable.execute({ topic: 't', agents: ['main'] }, noAgentExec).catch((e) => e)
   assert(emptyPanel instanceof Error && /未知专家/.test(emptyPanel.message), 'roundtable: main is not a panel member')
 
-  const card = teamCall.presentCall?.({ agent: 'reviewer', task: 'x' })
+  const card = teamCall.presentCall?.({ agent: 'reviewer', task: 'x', instances: 2 })
   assert(card !== undefined && card.card !== undefined, 'team_call: presentCall pure for valid args')
 }
 

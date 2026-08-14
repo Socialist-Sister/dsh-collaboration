@@ -1,13 +1,27 @@
 /**
- * `@dsh-collaboration/team`: the named specialist roster for DeepSeek Harness.
+ * `@dsh-collaboration/team`: the named specialist roster AND live team registry
+ * for DeepSeek Harness.
  *
  * A HOST-plane row that registers the `collaboration-team` settings namespace
- * and publishes the `collaborationTeam` service. The roster is a list of
- * agent identities — each with a stable id, a display name, a duty
- * (`role`), an optional persona, and its own provider/model — that the user
- * edits in `settings.yaml`. Collaboration tools (`tool-team`) resolve the
- * roster through the service, so a user can re-point any identity at another
- * model (or clear it back to unconfigured) without touching a preset.
+ * and publishes the `collaborationTeam` service. The roster is a list of agent
+ * identities — each with a stable id, a display name, a duty (`role`), an
+ * optional persona, and an optional provider/model — that the user edits in
+ * `settings.yaml`.
+ *
+ * v0.2 adds the LIVE TEAM layer on top of the roster: identities act as
+ * templates that the main agent hires as PERSISTENT specialist instances
+ * (continuable subagents). Every instance has its own durable session:
+ *
+ *   - `spawn()`    hire one instance (same identity can be hired N times:
+ *                  `reviewer#1`, `reviewer#2`, … — the multi-clone feature)
+ *   - `followup()` main → specialist message (child wakes and answers)
+ *   - `close()`    interrupt one instance
+ *   - `instances()`/`workingSet()`  live status for the main agent
+ *
+ * Specialist → main happens through the child's built-in `report` tool; the
+ * continuation manager delivers a settlement notice to the parent when an
+ * instance finishes. Specialist ↔ specialist communication is STAR-shaped:
+ * routed through the main agent (the chat coordinator), never direct.
  *
  * Identities with an empty `provider`/`model` FOLLOW THE SESSION MODEL (the
  * chat-box selector): the roster works with zero configuration, and a user
@@ -17,9 +31,12 @@
  */
 import z from '@deepseek-ai/schemastery'
 import { settingsNamespace } from '@deepseek-ai/dsh-settings'
+import type { Agent } from '@deepseek-ai/dsh-agent'
+import type { MessageId } from '@deepseek-ai/dsh-llm'
+import type { SessionId } from '@deepseek-ai/dsh-session'
 
 export const name = 'team'
-export const inject = ['settings']
+export const inject = ['settings', 'subagents', 'agents']
 
 export const NS = settingsNamespace('collaboration-team')
 
@@ -144,7 +161,57 @@ export const TeamSchema: z<TeamConfigSchema> = z.object({
 
 export const Config: z<TeamConfigSchema> = TeamSchema
 
-/** Normalize a schema-resolved agent into a TeamAgent (null → undefined). */
+/** One hired specialist instance (a persistent continuable child). */
+export interface TeamInstance {
+  /** Instance id, e.g. `reviewer#1`; stable within this process. */
+  readonly instanceId: string
+  /** The roster identity this instance was hired from. */
+  readonly identityId: string
+  /** Display name of the identity. */
+  readonly name: string
+  /** The durable child session id. */
+  readonly childId: SessionId
+  /** The child's persisted creation label (`team:<instanceId>`). */
+  readonly label: string
+  /** Epoch milliseconds when this instance was hired. */
+  readonly createdAt: number
+}
+
+/** A live view of one instance, with its current status. */
+export interface TeamInstanceView extends TeamInstance {
+  readonly status: 'working' | 'settled'
+}
+
+/** Options for hiring one specialist instance. */
+export interface SpawnOptions {
+  /** Optional background context appended to the task. */
+  context?: string
+  /** Caller cancellation, owning the operation until inbox acceptance. */
+  signal?: AbortSignal
+}
+
+/** The service published under `collaborationTeam`. */
+export interface TeamService {
+  /** The current roster, resolved from settings at every call. */
+  roster(): TeamAgent[]
+  /** Resolve one identity by id, or undefined when unknown. */
+  resolve(id: string): TeamAgent | undefined
+  /** Whether one identity pins its own model (empty = follows the session model). */
+  configured(agent: TeamAgent): boolean
+  /** Build the standalone specialist prompt for one identity + task. */
+  promptFor(agent: TeamAgent, task: string, extra?: string): string
+  /** Hire one persistent specialist instance; resolves once the child accepted the task. */
+  spawn(parent: Agent, identityId: string, task: string, opts?: SpawnOptions): Promise<TeamInstance>
+  /** Send one message from the main agent to a hired instance. */
+  followup(parent: Agent, instanceId: string, message: string, signal?: AbortSignal): Promise<{ instanceId: string; messageId: MessageId }>
+  /** Interrupt one hired instance's current turn. */
+  close(parent: Agent, instanceId: string): void
+  /** Live status of every instance visible to this parent (registry + persisted labels). */
+  instances(parent: Agent): Promise<TeamInstanceView[]>
+  /** Synchronous snapshot of instances hired in this process (for prompt sections). */
+  workingSet(): TeamInstance[]
+}
+
 function toAgent(entry: any): TeamAgent {
   return {
     id: entry.id ?? '',
@@ -170,6 +237,30 @@ function validateRoster(value: TeamConfigSchema) {
   }
 }
 
+/** Parse an instance label (`team:reviewer#2`) back into its identity and index. */
+export function parseInstanceLabel(label: string): { identityId: string; index: number } | undefined {
+  const match = /^team:([a-zA-Z0-9_-]+)#(\d+)$/.exec(label)
+  if (match === null) return undefined
+  return { identityId: match[1], index: Number(match[2]) }
+}
+
+/** Build the standalone specialist prompt for one identity + task. */
+export function buildSpecialistPrompt(agent: TeamAgent, task: string, extra?: string): string {
+  const lines = [
+    `你是主代理团队中的专项专家：${agent.name}（${agent.id}）。`,
+    `你的职责：${agent.role}`,
+  ]
+  if (agent.persona !== undefined && agent.persona.length > 0) lines.push(`你的行事风格：${agent.persona}`)
+  lines.push(``, `任务：${task}`)
+  if (extra !== undefined && extra.trim().length > 0) lines.push(``, `背景与要求：${extra}`)
+  lines.push(
+    ``,
+    `完成任务后用 report 工具把结论报告给主代理；收到主代理的追问就继续处理，没有新消息时保持待命。`,
+    `回复语言跟随任务所用语言。`,
+  )
+  return lines.join('\n')
+}
+
 export function apply(ctx: any) {
   const scope = ctx.settings.register(NS, TeamSchema, {
     base: { agents: [...DEFAULT_ROSTER] as any },
@@ -179,16 +270,126 @@ export function apply(ctx: any) {
 
   const roster = (): TeamAgent[] => scope.get().agents?.map(toAgent) ?? []
 
+  const resolve = (id: string): TeamAgent | undefined => roster().find((agent) => agent.id === id)
+
+  const configured = (agent: TeamAgent): boolean => agent.provider !== undefined && agent.model !== undefined
+
+  const promptFor = (agent: TeamAgent, task: string, extra?: string): string => buildSpecialistPrompt(agent, task, extra)
+
+  // ── live instance registry (process-local cache; labels are the durable truth) ──
+  const registry = new Map<string, TeamInstance>()
+  const counters = new Map<string, number>()
+
+  const workingSet = (): TeamInstance[] => [...registry.values()]
+
+  const recordFromLabel = (label: string, childId: SessionId): TeamInstance | undefined => {
+    const parsed = parseInstanceLabel(label)
+    if (parsed === undefined) return undefined
+    const identity = resolve(parsed.identityId)
+    return {
+      instanceId: `${parsed.identityId}#${parsed.index}`,
+      identityId: parsed.identityId,
+      name: identity?.name ?? parsed.identityId,
+      childId,
+      label,
+      createdAt: 0,
+    }
+  }
+
+  const resolveChildId = async (parent: Agent, instanceId: string): Promise<SessionId> => {
+    const hit = registry.get(instanceId)
+    if (hit !== undefined) return hit.childId
+    const children = await ctx.subagents.listChildren(parent.session.id)
+    for (const child of children) {
+      const record = recordFromLabel(child.label ?? '', child.id)
+      if (record !== undefined && record.instanceId === instanceId) return child.id
+    }
+    throw new Error(`未知的专家实例 "${instanceId}"——用 team_status 查看当前在线实例。`)
+  }
+
+  const spawn: TeamService['spawn'] = async (parent, identityId, task, opts) => {
+    const agent = resolve(identityId)
+    if (agent === undefined) throw new Error(`未知专家 "${identityId}"。当前名册：${roster().map((a) => a.id).join(', ')}。`)
+    const index = (counters.get(identityId) ?? 0) + 1
+    counters.set(identityId, index)
+    const instanceId = `${identityId}#${index}`
+    const label = `team:${instanceId}`
+    const start = await ctx.subagents.startContinuable({
+      provider: 'spawn',
+      label,
+      request: {
+        prompt: [{ type: 'text', text: promptFor(agent, task, opts?.context) }],
+        parent,
+        ...(configured(agent)
+          ? {
+              agentOptions: {
+                provider: agent.provider,
+                model: agent.model,
+                ...(agent.maxTokens !== undefined ? { maxTokens: agent.maxTokens } : {}),
+              },
+            }
+          : {}),
+        maxDepth: 1,
+      },
+      ...(opts?.signal !== undefined ? { signal: opts.signal } : {}),
+    })
+    const record: TeamInstance = {
+      instanceId,
+      identityId,
+      name: agent.name,
+      childId: start.childId,
+      label,
+      createdAt: Date.now(),
+    }
+    registry.set(instanceId, record)
+    return record
+  }
+
+  const followup: TeamService['followup'] = async (parent, instanceId, message, signal) => {
+    const childId = await resolveChildId(parent, instanceId)
+    const messageId = await ctx.subagents.followup(parent, childId, [{ type: 'text', text: message }], {
+      source: { kind: 'coordinator', form: 'relay', senderSessionId: parent.session.id },
+      ...(signal !== undefined ? { signal } : {}),
+    })
+    return { instanceId, messageId }
+  }
+
+  const close: TeamService['close'] = (parent, instanceId) => {
+    const hit = registry.get(instanceId)
+    if (hit === undefined) return
+    ctx.subagents.interrupt(hit.childId, { kind: 'ancestor', agent: parent })
+  }
+
+  const instances: TeamService['instances'] = async (parent) => {
+    const views = new Map<string, TeamInstanceView>()
+    for (const record of registry.values()) {
+      const live = ctx.agents.get(record.childId)
+      views.set(record.instanceId, { ...record, status: live === undefined ? 'settled' : 'working' })
+    }
+    let children: { id: SessionId; label?: string }[] = []
+    try {
+      children = (await ctx.subagents.listChildren(parent.session.id)) as any
+    } catch {
+      /* persistence unavailable — registry-only view */
+    }
+    for (const child of children) {
+      const record = recordFromLabel(child.label ?? '', child.id)
+      if (record === undefined || views.has(record.instanceId)) continue
+      const live = ctx.agents.get(child.id)
+      views.set(record.instanceId, { ...record, status: live === undefined ? 'settled' : 'working' })
+    }
+    return [...views.values()]
+  }
+
   ctx.provide('collaborationTeam', {
-    /** The current roster, resolved from settings at every call. */
     roster,
-    /** Resolve one identity by id, or undefined when unknown. */
-    resolve(id: string): TeamAgent | undefined {
-      return roster().find((agent) => agent.id === id)
-    },
-    /** Whether one identity pins its own model (empty = follows the session model). */
-    configured(agent: TeamAgent): boolean {
-      return agent.provider !== undefined && agent.model !== undefined
-    },
-  })
+    resolve,
+    configured,
+    promptFor,
+    spawn,
+    followup,
+    close,
+    instances,
+    workingSet,
+  } satisfies TeamService)
 }

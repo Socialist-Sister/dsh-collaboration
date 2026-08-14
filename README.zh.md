@@ -25,8 +25,8 @@
 
 | 能力 | 包 | 说明 |
 |---|---|---|
-| 🧑‍🤝‍🧑 专家名册 | `@dsh-collaboration/team` | 预设十身份（主代理/规划师/工程师/调试员/审查员/研究员/评论家/写手/观察员/画家），各司其职；每个身份的模型在 `settings.yaml` 自行配置，**改完即生效**；留空 = 跟随主模型 |
-| 🎯 按需点名 | `@dsh-collaboration/tool-team` | `team_call` 点名单个专家（以其人设+其模型作为子代理执行）；`roundtable` 并行召集多位专家；名册实时展示给主代理 |
+| 🧑‍🤝‍🧑 专家名册 | `@dsh-collaboration/team` | 预设十身份（主代理/规划师/工程师/调试员/审查员/研究员/评论家/写手/观察员/画家），各司其职；每个身份的模型在 `settings.yaml` 自行配置，**改完即生效**；留空 = 跟随主模型。v0.2 起身份即模板，可雇佣为**持久专家实例**（可多分身） |
+| 🎯 团队控制台 | `@dsh-collaboration/tool-team` | `team_call` 雇佣持久专家实例（`instances` 分身）；`team_message` 追问/转发（星型拓扑）；`team_status` 团队面板；`team_close` 解散；`roundtable` 一次性并行圆桌 |
 | ⚖️ 模型对比 | `@dsh-collaboration/tool-model-compare` | 同一 prompt 并发发送多个模型，答案并排返回 |
 | 👁️ 多模态桥 | `@dsh-collaboration/tool-vision` | 纯文本主代理把图片/截图交给视觉模型，拿回文字分析 |
 | 🎁 一键预设 | `config/agent-presets/collaboration` | standard 全量工具 + 上述工具（显示名：**协同模式**） |
@@ -37,12 +37,13 @@
 官方「设置 → 模型」：deepseek-official + 用户添加的供应商（OpenAI 兼容协议等）
         │  已注册路由
         ▼
-collaboration-team 名册（settings.yaml）   ←── 每个身份：人设 + 可选模型
-        │  宿主服务 collaborationTeam
+collaboration-team 名册（settings.yaml）   ←── 每个身份：人设 + 可选模型（模板）
+        │  宿主服务 collaborationTeam（名册 + 实时实例注册表）
         ▼
-主代理（协同模式预设）
-  ├─ team_call    → 点名专家 → 子代理（该身份人设 + 该身份模型）→ 结论回传
-  ├─ roundtable   → 多位专家并行发言 → 主代理主持综合
+主代理（协同模式预设，星型枢纽）
+  ├─ team_call    → 雇佣持久专家实例（可多分身）→ 专家用 report 汇报 / 结算通知
+  ├─ team_message → 追问/转发任何实例（专家间通信经主代理中转）
+  ├─ team_status  → 实时团队面板；team_close → 解散实例
   ├─ model_compare → 多模型同题并发对比
   └─ vision       → 图片交给视觉模型 → 文字分析回传
 ```
@@ -113,9 +114,10 @@ collaboration-team:
 ## 使用示例
 
 ```
-用 team_call 让 reviewer 审查我刚写的认证模块，指出安全风险。
-把 docs/screenshot.png 交给 looker，让他描述这张 UI 截图里的布局和问题。
-开个 roundtable（planner、reviewer、critic）评估"把单体服务拆成微服务"这个决定。
+雇佣两个 reviewer 分身，分别审查认证模块和支付模块。
+用 team_message 让 reviewer#1 补充对会话固定攻击的分析。
+把 critic 的质疑转发给 planner 评估。
+开个 roundtable（planner、reviewer、critic）评估"把单体服务拆成微服务"。
 用 model_compare 对比 deepseek-v4-pro 和 zhipu/glm-4.5 对同一问题的回答。
 ```
 
