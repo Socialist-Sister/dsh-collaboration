@@ -16,6 +16,8 @@ dsh-collaboration 由两类组件构成，分别装在 DeepSeek Harness 的两�
 
 ## 1. 安装包到 profile workspace
 
+> **发布到 npm 之前**，也可以从 [Releases](https://github.com/Socialist-Sister/dsh-collaboration/releases) 下载 v0.1.0 的七个 `.tgz` 附件，用本地路径安装（例如 `pnpm add -w ./downloads/dsh-collaboration-team-0.1.0.tgz ...`）。发布后则直接用下方包名。
+
 在 profile 目录（例如 `%USERPROFILE%\.dsh\profiles\web`）执行：
 
 ```powershell
