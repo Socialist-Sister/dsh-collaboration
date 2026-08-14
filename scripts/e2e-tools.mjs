@@ -60,7 +60,13 @@ function makeMockCtx() {
           ...entry,
           status: captured.dismissed.has(entry.instanceId) ? 'dismissed' : 'working',
         })),
-      workingSet: () => captured.hired,
+      workingSet: () => captured.hired.filter((entry) => !captured.dismissed.has(entry.instanceId)),
+    },
+    subagents: {
+      start: async () => ({
+        result: Promise.resolve({ output: [{ type: 'text', text: 'ONESHOT' }], stopReason: 'completed' }),
+        dispose: async () => {},
+      }),
     },
     tools: {
       register(definition) {
@@ -165,6 +171,10 @@ console.log('== @dsh-collaboration/tool-team ==')
 
   const badWait = await teamCall.execute({ agent: 'reviewer', task: 'x', wait: true, instances: 2 }, agentExec).catch((e) => e)
   assert(badWait instanceof Error && /wait/.test(badWait.message), 'team_call: wait mode refuses clones')
+
+  // F5: wait mode returns a one-shot marker (empty instances + answer), never an addressable instance id.
+  const oneShot = await teamCall.execute({ agent: 'reviewer', task: 'x', wait: true }, agentExec)
+  assert(oneShot.instances.length === 0 && oneShot.answer === 'ONESHOT', 'team_call: wait mode returns one-shot marker, not a persistent instance id')
 
   const teamMessage = captured.tools.find((tool) => tool.name === 'team_message')
   const msgNoAgent = await teamMessage.execute({ to: 'reviewer#1', message: 'hi' }, noAgentExec).catch((e) => e)

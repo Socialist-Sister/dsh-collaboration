@@ -213,8 +213,8 @@ export interface TeamService {
   close(parent: Agent, instanceId: string): Promise<void>
   /** Live status of every instance visible to this parent (registry + persisted labels). */
   instances(parent: Agent): Promise<TeamInstanceView[]>
-  /** Synchronous snapshot of instances hired in this process (for prompt sections). */
-  workingSet(): TeamInstance[]
+  /** Synchronous snapshot of live, non-dismissed instances hired in this process (for prompt sections); optional parent-session scope. */
+  workingSet(parentSessionId?: string): TeamInstance[]
 }
 
 function toAgent(entry: any): TeamAgent {
@@ -236,6 +236,9 @@ function validateRoster(value: TeamConfigSchema) {
     const id = agent?.id
     if (typeof id !== 'string' || id.length === 0) {
       throw new Error('collaboration-team: every agent needs a non-empty id')
+    }
+    if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
+      throw new Error(`collaboration-team: invalid agent id "${id}" — ids may only contain letters, digits, underscores and hyphens`)
     }
     if (seen.has(id)) throw new Error(`collaboration-team: duplicate agent id "${id}"`)
     seen.add(id)
@@ -285,12 +288,49 @@ export function apply(ctx: any) {
   interface LiveRecord extends TeamInstance {
     dismissed?: boolean
   }
-  const registry = new Map<string, LiveRecord>()
-  const counters = new Map<string, number>()
-  /** Instance ids dismissed through label recovery (not in the live registry). */
-  const dismissedRecovered = new Set<string>()
+  // F2: per-parent buckets — sibling sessions are isolated from each other.
+  const buckets = new Map<string, Map<string, LiveRecord>>()
+  const counters = new Map<string, Map<string, number>>()
+  // Instance ids dismissed through label recovery (not in the live registry).
+  const dismissedRecovered = new Map<string, Set<string>>()
 
-  const workingSet = (): TeamInstance[] => [...registry.values()]
+  const bucketOf = (parentId: string): Map<string, LiveRecord> => {
+    let bucket = buckets.get(parentId)
+    if (bucket === undefined) {
+      bucket = new Map()
+      buckets.set(parentId, bucket)
+    }
+    return bucket
+  }
+
+  const counterOf = (parentId: string): Map<string, number> => {
+    let counter = counters.get(parentId)
+    if (counter === undefined) {
+      counter = new Map()
+      counters.set(parentId, counter)
+    }
+    return counter
+  }
+
+  const dismissedOf = (parentId: string): Set<string> => {
+    let set = dismissedRecovered.get(parentId)
+    if (set === undefined) {
+      set = new Set()
+      dismissedRecovered.set(parentId, set)
+    }
+    return set
+  }
+
+  // F3: the working set only contains live, non-dismissed instances.
+  const workingSet = (parentSessionId?: string): TeamInstance[] => {
+    const records: LiveRecord[] = []
+    if (parentSessionId === undefined) {
+      for (const bucket of buckets.values()) records.push(...bucket.values())
+    } else {
+      records.push(...(buckets.get(parentSessionId)?.values() ?? []))
+    }
+    return records.filter((record) => !record.dismissed)
+  }
 
   const recordFromLabel = (label: string, childId: SessionId): TeamInstance | undefined => {
     const parsed = parseInstanceLabel(label)
@@ -306,13 +346,14 @@ export function apply(ctx: any) {
     }
   }
 
-  const isDismissed = (instanceId: string): boolean => {
-    const hit = registry.get(instanceId)
-    return (hit?.dismissed ?? false) || dismissedRecovered.has(instanceId)
+  const isDismissed = (parentId: string, instanceId: string): boolean => {
+    const hit = buckets.get(parentId)?.get(instanceId)
+    return (hit?.dismissed ?? false) || (dismissedRecovered.get(parentId)?.has(instanceId) ?? false)
   }
 
   const resolveChildId = async (parent: Agent, instanceId: string): Promise<SessionId> => {
-    const hit = registry.get(instanceId)
+    const parentId = String(parent.session.id)
+    const hit = buckets.get(parentId)?.get(instanceId)
     if (hit !== undefined) return hit.childId
     const children = await ctx.subagents.listChildren(parent.session.id)
     for (const child of children) {
@@ -325,8 +366,31 @@ export function apply(ctx: any) {
   const spawn: TeamService['spawn'] = async (parent, identityId, task, opts) => {
     const agent = resolve(identityId)
     if (agent === undefined) throw new Error(`未知专家 "${identityId}"。当前名册：${roster().map((a) => a.id).join(', ')}。`)
-    const index = (counters.get(identityId) ?? 0) + 1
-    counters.set(identityId, index)
+    if (!/^[a-zA-Z0-9_-]+$/.test(identityId)) {
+      throw new Error(`身份 id "${identityId}" 含非法字符——名册 id 只允许字母、数字、下划线和连字符。`)
+    }
+    const parentId = String(parent.session.id)
+    const counter = counterOf(parentId)
+    let index = counter.get(identityId) ?? 0
+    if (index === 0) {
+      // F1: recover the counter from persisted child labels after a restart,
+      // so a re-hire never collides with an existing durable child's label.
+      let maxIndex = 0
+      try {
+        const children = await ctx.subagents.listChildren(parent.session.id)
+        for (const child of children) {
+          const parsed = parseInstanceLabel(child.label ?? '')
+          if (parsed !== undefined && parsed.identityId === identityId) {
+            maxIndex = Math.max(maxIndex, parsed.index)
+          }
+        }
+      } catch {
+        /* persistence unavailable — registry-only counting */
+      }
+      index = maxIndex
+    }
+    index += 1
+    counter.set(identityId, index)
     const instanceId = `${identityId}#${index}`
     const label = `team:${instanceId}`
     const start = await ctx.subagents.startContinuable({
@@ -356,12 +420,12 @@ export function apply(ctx: any) {
       label,
       createdAt: Date.now(),
     }
-    registry.set(instanceId, record)
+    bucketOf(parentId).set(instanceId, record)
     return record
   }
 
   const followup: TeamService['followup'] = async (parent, instanceId, message, signal) => {
-    if (isDismissed(instanceId)) {
+    if (isDismissed(String(parent.session.id), instanceId)) {
       throw new Error(`专家实例 "${instanceId}" 已被解散，无法再发送消息。`)
     }
     const childId = await resolveChildId(parent, instanceId)
@@ -375,17 +439,19 @@ export function apply(ctx: any) {
   const close: TeamService['close'] = async (parent, instanceId) => {
     const childId = await resolveChildId(parent, instanceId)
     ctx.subagents.interrupt(childId, { kind: 'ancestor', agent: parent })
-    const hit = registry.get(instanceId)
+    const parentId = String(parent.session.id)
+    const hit = buckets.get(parentId)?.get(instanceId)
     if (hit !== undefined) {
       hit.dismissed = true
     } else {
-      dismissedRecovered.add(instanceId)
+      dismissedOf(parentId).add(instanceId)
     }
   }
 
   const instances: TeamService['instances'] = async (parent) => {
+    const parentId = String(parent.session.id)
     const views = new Map<string, TeamInstanceView>()
-    for (const record of registry.values()) {
+    for (const record of buckets.get(parentId)?.values() ?? []) {
       const live = ctx.agents.get(record.childId)
       const status = record.dismissed ? 'dismissed' : live === undefined ? 'settled' : 'working'
       views.set(record.instanceId, { ...record, status })
@@ -400,7 +466,7 @@ export function apply(ctx: any) {
       const record = recordFromLabel(child.label ?? '', child.id)
       if (record === undefined || views.has(record.instanceId)) continue
       const live = ctx.agents.get(child.id)
-      const status = dismissedRecovered.has(record.instanceId) ? 'dismissed' : live === undefined ? 'settled' : 'working'
+      const status = dismissedOf(parentId).has(record.instanceId) ? 'dismissed' : live === undefined ? 'settled' : 'working'
       views.set(record.instanceId, { ...record, status })
     }
     return [...views.values()]

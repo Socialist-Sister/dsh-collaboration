@@ -193,8 +193,9 @@ export function apply(ctx: any, config: RawConfig) {
     systemPrompt.section({
       name: 'dsh-collaboration:team-roster',
       order: 150,
-      text: () => {
-        const working = Array.isArray(ctx.collaborationTeam.workingSet?.()) ? ctx.collaborationTeam.workingSet() : []
+      text: (context: any) => {
+        const parentId = context?.agent?.session?.id
+        const working = Array.isArray(ctx.collaborationTeam.workingSet) ? ctx.collaborationTeam.workingSet(parentId) : []
         return renderTeam(roster(), working)
       },
     })
@@ -268,7 +269,9 @@ export function apply(ctx: any, config: RawConfig) {
         if (args.wait === true) {
           if (instances !== 1) throw new Error('team_call: wait 模式只能雇佣 1 个实例')
           const answer = await runOne(agent, args.task, args.context, exec)
-          return { instances: [{ instanceId: agent.id, name: agent.name }], answer }
+          // F5: a one-shot call is NOT a persistent instance — return an empty
+          // instance list plus the answer, never an addressable instance id.
+          return { instances: [], answer }
         }
         const hired: { instanceId: string; name: string }[] = []
         for (let i = 0; i < instances; i++) {

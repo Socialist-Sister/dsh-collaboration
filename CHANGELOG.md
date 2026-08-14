@@ -2,6 +2,22 @@
 
 本文件记录 dsh-collaboration 各版本的变更（遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 精神）。
 
+## [v0.3.0] - 2026-08-14
+
+### 修复（实例生命周期地基，"先正确后功能"）
+
+协同模式会话的活体团队审查（reviewer×2 + planner 复核）发现并确认了以下正确性问题，本版全部修复：
+
+- **F1 重启 label 碰撞**：计数从内存 1 起算，重启后再次雇佣会同名撞到已有持久子代理。现在 spawn 时从父会话的持久子代理 label（`team:<identityId>#<n>`）恢复最大计数。
+- **F2 跨会话隔离**：实例注册表/计数/解散标记全部按 `parentSessionId` 分桶，A 会话的 `team_status`/`team_message`/`team_close` 不再看到或触碰 B 会话的实例。
+- **F3 工作集收敛**：`workingSet()` 只返回未解散的实例（settled/dismissed 保留在 `instances()` 中展示）；提示段按父会话作用域渲染。
+- **F4 身份 id 字符集校验**：名册 id 只允许 `[a-zA-Z0-9_-]`（校验期 + spawn 防卫），保证 label 解析可逆。
+- **F5 wait 模式契约诚实化**：`team_call wait: true` 返回一次性标记（`instances: []` + `answer`），不再冒充可寻址的持久实例 id。
+
+### 决策记录
+
+- v0.3.1 起按「地基 → 团队频道 → 上下文经济与收敛」的顺序推进；网状拓扑缓至 v0.4（三重门槛：上游 authority protocol + F1–F5 全关闭 + 实测证据）。
+
 ## [v0.2.1] - 2026-08-14
 
 ### 修复
