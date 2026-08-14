@@ -42,6 +42,7 @@ function makeMockCtx() {
           childId: `child-${captured.hired.length + 1}`,
           label: `team:${identityId}#${captured.hired.length + 1}`,
           createdAt: 1,
+          task,
         }
         captured.hired.push(record)
         return record
@@ -168,6 +169,11 @@ console.log('== @dsh-collaboration/tool-team ==')
 
   const badRange = await teamCall.execute({ agent: 'reviewer', task: 'x', instances: 11 }, agentExec).catch((e) => e)
   assert(badRange instanceof Error && /1-10/.test(badRange.message), 'team_call: instance count bounded')
+
+  // Per-clone tasks: one call hires distinct clones with distinct work.
+  const distinct = await teamCall.execute({ agent: 'reviewer', task: 'fallback', tasks: ['审查认证', '审查支付'] }, agentExec)
+  assert(distinct.instances.length === 2, 'team_call: tasks array hires one clone per entry')
+  assert(captured.hired[3].task === '审查认证' && captured.hired[4].task === '审查支付', 'team_call: each clone receives its own task')
 
   const badWait = await teamCall.execute({ agent: 'reviewer', task: 'x', wait: true, instances: 2 }, agentExec).catch((e) => e)
   assert(badWait instanceof Error && /wait/.test(badWait.message), 'team_call: wait mode refuses clones')

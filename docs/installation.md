@@ -16,9 +16,10 @@ dsh-collaboration **不自带模型适配器**：模型供应商全部通过 DSH
 
 ## 1. 安装包到 profile workspace
 
-> **发布到 npm 之前**，可以从 [Releases](https://github.com/Socialist-Sister/dsh-collaboration/releases) 下载 `.tgz` 附件，用本地路径安装（例如 `pnpm add -w ./downloads/dsh-collaboration-team-0.1.0.tgz ...`）。发布后则直接用下方包名。
+> **路径约定**：本文的 `${DSH_HOME}` 指 DSH 用户数据目录（Windows 下通常为 `%USERPROFILE%\.dsh`）；`profile workspace` 指 `${DSH_HOME}\profiles\<profile名>`（本机示例为 `${DSH_HOME}\profiles\web`）。
+> **发布到 npm 之前**，可以从 [Releases](https://github.com/Socialist-Sister/dsh-collaboration/releases) 下载 `.tgz` 附件，用本地路径安装（例如 `pnpm add -w ./downloads/dsh-collaboration-team-0.3.1.tgz ...`，版本号以最新 Release 为准）。发布后则直接用下方包名。
 
-在 profile 目录（例如 `%USERPROFILE%\.dsh\profiles\web`）执行：
+在 profile 目录执行：
 
 ```powershell
 pnpm add -w @dsh-collaboration/team @dsh-collaboration/tool-team @dsh-collaboration/tool-model-compare @dsh-collaboration/tool-vision
@@ -38,6 +39,8 @@ profile workspace 使用 `nodeLinker: hoisted`，包与其依赖会被提升到 
 
 **不要禁用内置 `llm-pi-ai`**——官方「添加供应商」功能就是它提供的。本套件不注册任何模型路由，与官方目录天然无冲突。
 
+> **已有 patch 内容怎么办**：`cordis.patch.yml` 是 YAML 数组，把上面的 `- insert:` 条目**追加进现有数组**即可（与已有条目并列，注意数组项以 `- ` 开头、与已有条目同级缩进）。用 `dsh --profile <名> --dump-config` 可随时验证合并结果。
+
 ## 3. 添加模型供应商（官方界面）
 
 「设置 → 模型」页底部用官方**添加供应商**卡片接入各家（以智谱 GLM 为例）：
@@ -56,7 +59,7 @@ profile workspace 使用 `nodeLinker: hoisted`，包与其依赖会被提升到 
 
 ## 4. 配置专家名册（settings.yaml）
 
-`team` 行提供默认名册（主代理/规划师/工程师/调试员/审查员/研究员/评论家/写手 + 未配置的观察员/画家）。在 `settings.yaml` 的 `collaboration-team` 段整体替换，**改完即生效**：
+配置文件位置：`${DSH_HOME}\settings.yaml`（与 `.credentials.yaml` 同级）。`team` 行提供默认名册（主代理/规划师/工程师/调试员/审查员/研究员/评论家/写手 + 未配置的观察员/画家）。在 `collaboration-team` 段整体替换，**改完即生效**：
 
 ```yaml
 collaboration-team:
@@ -74,19 +77,23 @@ collaboration-team:
 
 ## 5. 安装「协同模式」预设（id: collaboration）
 
-把本仓库的 `config/agent-presets/collaboration` 目录复制到用户预设根：
+把本仓库的 `config/agent-presets/collaboration` 目录复制到用户预设根（`${DSH_HOME}\.agent-presets\`）：
 
 ```powershell
 Copy-Item -Recurse <repo>\config\agent-presets\collaboration "$env:USERPROFILE\.dsh\.agent-presets\collaboration"
 ```
 
+> **注意**：复制安装的预设是**漂移快照**——仓库更新预设后需重新复制（或手工同步改动）。已有会话不受影响，新会话按重启时的副本挂载。
+
 ## 6. 重启并验证
 
-重启 DSH（改动在启动时生效）。验证：
+重启 DSH（patch 行与预设副本都在启动时生效；名册 settings 改动则实时生效）。验证：
 
 1. 模型选择器默认只出现 `deepseek-official` + 你在第 3 步添加的供应商；
-2. 新建会话选择「协同模式」预设，工具列表里出现 `team_call` / `roundtable` / `model_compare` / `vision`；
+2. 新建会话选择「协同模式」预设，工具列表里出现 `team_call` / `team_message` / `team_status` / `team_close` / `roundtable` / `model_compare` / `vision`；
 3. 若某身份/工具引用了未添加的路由，调用时对应条目只报错，不影响其他条目。
+
+> 状态时窗说明：`team_status` 的 `working/settled` 基于子代理是否仍驻留，专家刚汇报完、结算通知送达前可能短暂显示 `working`，属正常时窗；`dismissed` 由本套件标记，即时准确。
 
 ## 7. 使用示例
 

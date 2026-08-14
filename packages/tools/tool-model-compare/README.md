@@ -26,6 +26,8 @@
 
 单模型失败只产生该条目的 `error`，不影响其他模型。
 
+配置中另有可选的 `config.system`（每次对比的系统提示默认值）。
+
 ## License
 
 [MIT](../../LICENSE)

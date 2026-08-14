@@ -2,6 +2,15 @@
 
 本文件记录 dsh-collaboration 各版本的变更（遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 精神）。
 
+## [v0.3.1] - 2026-08-14
+
+### 修复与改进（协同模式会话实测总结的处置）
+
+- **I1（实质）**：`maxDepth` 对持久雇佣路径失效（spawn 硬编码 1）——现在 `SpawnOptions.maxDepth` 透传（默认 1），预设配置对 `team_call` 持久路径同样生效。
+- **分身任务差异化**：`team_call` 新增 `tasks: string[]`——一次调用按任务数雇佣分身，每个分身拿到自己的任务（此前 `instances > 1` 只能下发同一份 task，实测发现）。
+- **I4**：`tool-vision` 默认 provider/model 统一为 `zhipu` / `glm-4v-flash`，与预设和文档一致（0.2.0）。
+- **文档修复**：I2（tgz 示例版本改为最新并注明"以最新 Release 为准"）、I3（model-compare / vision README 补 `config.system`）、I5（team README 补全 label 恢复与 close 扫描语义）；新用户清晰度 5 条（`${DSH_HOME}` 定义与路径统一、settings.yaml 位置、预设漂移快照警告、已有 patch 合并方式、验证清单补全四个团队工具）；补充 `team_status` 状态时窗说明。
+
 ## [v0.3.0] - 2026-08-14
 
 ### 修复（实例生命周期地基，"先正确后功能"）

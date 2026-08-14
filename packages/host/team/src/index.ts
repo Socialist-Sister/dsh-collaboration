@@ -188,6 +188,8 @@ export interface SpawnOptions {
   context?: string
   /** Caller cancellation, owning the operation until inbox acceptance. */
   signal?: AbortSignal
+  /** Delegation-depth cap for the child; defaults to 1 (no further delegation). */
+  maxDepth?: number
 }
 
 /** The service published under `collaborationTeam`. */
@@ -408,7 +410,7 @@ export function apply(ctx: any) {
               },
             }
           : {}),
-        maxDepth: 1,
+        maxDepth: opts?.maxDepth ?? 1,
       },
       ...(opts?.signal !== undefined ? { signal: opts.signal } : {}),
     })

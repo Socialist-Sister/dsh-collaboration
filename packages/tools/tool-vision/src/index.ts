@@ -27,9 +27,9 @@ export interface VisionConfig {
 
 export const Config: z<VisionConfig> = z.object({
   /** Default provider route; per-call `provider` overrides it. */
-  provider: z.string().default('gemini'),
+  provider: z.string().default('zhipu'),
   /** Default model id; per-call `model` overrides it. */
-  model: z.string().default('gemini-2.5-flash'),
+  model: z.string().default('glm-4v-flash'),
   /** Output-token cap for the vision call. */
   maxTokens: z.number().step(1).min(1).default(4096),
   /** Optional system prompt for the vision call. */
@@ -115,11 +115,11 @@ export function apply(ctx: any, config: RawConfig) {
         },
         provider: {
           type: 'string',
-          description: `Optional provider route override (default: ${config.provider ?? 'gemini'}). Must be a registered adapter with a vision-capable model.`,
+          description: `Optional provider route override (default: ${config.provider ?? 'zhipu'}). Must be a registered adapter with a vision-capable model.`,
         },
         model: {
           type: 'string',
-          description: `Optional model override (default: ${config.model ?? 'gemini-2.5-flash'}).`,
+          description: `Optional model override (default: ${config.model ?? 'glm-4v-flash'}).`,
         },
       },
       output: {
@@ -166,8 +166,8 @@ export function apply(ctx: any, config: RawConfig) {
           refs.push(saved)
         }
 
-        const provider = args.provider ?? config.provider ?? 'gemini'
-        const model = args.model ?? config.model ?? 'gemini-2.5-flash'
+        const provider = args.provider ?? config.provider ?? 'zhipu'
+        const model = args.model ?? config.model ?? 'glm-4v-flash'
         const message = createUserMessage({
           content: [
             { type: 'text', text: args.question },

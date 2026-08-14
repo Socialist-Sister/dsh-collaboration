@@ -214,7 +214,12 @@ export function apply(ctx: any, config: RawConfig) {
         task: {
           type: 'string',
           required: true,
-          description: 'The task for this specialist, stated completely — it works standalone.',
+          description: 'The task for this specialist (all clones), stated completely — it works standalone. When `tasks` is provided, this field is only the fallback description.',
+        },
+        tasks: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional per-clone tasks: hiring one clone per entry, each getting its own task (e.g. ["审查认证模块", "审查支付模块"] hires reviewer#1 and reviewer#2 with different work). Overrides `instances`; only meaningful when wait is false.',
         },
         context: {
           type: 'string',
@@ -259,25 +264,28 @@ export function apply(ctx: any, config: RawConfig) {
       },
       timeoutMs: 900000,
       isConcurrencySafe: () => true,
-      async execute(args: { agent: string; task: string; context?: string; instances?: number; wait?: boolean }, exec: ToolRunContext) {
+      async execute(args: { agent: string; task: string; tasks?: string[]; context?: string; instances?: number; wait?: boolean }, exec: ToolRunContext) {
         const parent = requireParent(exec)
         const agent = resolveAgent(args.agent)
-        const instances = args.instances ?? 1
-        if (!Number.isInteger(instances) || instances < 1 || instances > 10) {
-          throw new Error('team_call: instances 必须是 1-10 的整数')
+        const perCloneTasks = Array.isArray(args.tasks) && args.tasks.length > 0 ? args.tasks : undefined
+        const cloneCount = perCloneTasks !== undefined ? perCloneTasks.length : args.instances ?? 1
+        if (!Number.isInteger(cloneCount) || cloneCount < 1 || cloneCount > 10) {
+          throw new Error('team_call: 分身数量必须是 1-10 的整数')
         }
         if (args.wait === true) {
-          if (instances !== 1) throw new Error('team_call: wait 模式只能雇佣 1 个实例')
+          if (cloneCount !== 1 || perCloneTasks !== undefined) throw new Error('team_call: wait 模式只能雇佣 1 个实例且不支持 tasks 列表')
           const answer = await runOne(agent, args.task, args.context, exec)
           // F5: a one-shot call is NOT a persistent instance — return an empty
           // instance list plus the answer, never an addressable instance id.
           return { instances: [], answer }
         }
         const hired: { instanceId: string; name: string }[] = []
-        for (let i = 0; i < instances; i++) {
-          const record = await ctx.collaborationTeam.spawn(parent, agent.id, args.task, {
+        for (let i = 0; i < cloneCount; i++) {
+          const task = perCloneTasks !== undefined ? perCloneTasks[i] : args.task
+          const record = await ctx.collaborationTeam.spawn(parent, agent.id, task, {
             ...(args.context !== undefined ? { context: args.context } : {}),
             signal: exec.signal,
+            maxDepth,
           })
           hired.push({ instanceId: record.instanceId, name: record.name })
         }

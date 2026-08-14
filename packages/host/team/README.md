@@ -16,12 +16,12 @@
 | 方法 | 行为 |
 |---|---|
 | `roster()` / `resolve(id)` / `configured(agent)` | 名册查询（模板层） |
-| `spawn(parent, identityId, task, opts)` | **雇佣一个持久实例**（同一身份可多次雇佣 → reviewer#1、reviewer#2… 分身） |
-| `followup(parent, instanceId, message)` | 主代理 → 实例追问（星型拓扑的中转也走它） |
-| `close(parent, instanceId)` | 打断实例当前回合 |
-| `instances(parent)` / `workingSet()` | 实例状态（working/settled；workingset 为同步快照，供提示段） |
+| `spawn(parent, identityId, task, opts)` | **雇佣一个持久实例**（同一身份可多次雇佣 → reviewer#1、reviewer#2… 分身；`opts.maxDepth` 透传委派深度，默认 1） |
+| `followup(parent, instanceId, message)` | 主代理 → 实例追问（星型拓扑的中转也走它；已解散实例拒绝投递） |
+| `close(parent, instanceId)` | 打断实例当前回合并标记解散（未知 id 大声失败） |
+| `instances(parent)` / `workingSet(parentId?)` | 实例状态（working/settled/dismissed）；`workingSet` 为同步快照（仅未解散实例），供提示段 |
 
-实例以 continuable 子代理实现：label 为 `team:<identityId>#<n>`（持久真相），进程内注册表为缓存；重启后由 label 自动恢复识别。专家用内置 `report` 工具汇报，结算时主代理自动收到通知。
+实例以 continuable 子代理实现：label 为 `team:<identityId>#<n>`（持久真相），进程内注册表为**按父会话分桶的缓存**。重启后计数从该父会话的持久 label 恢复（不撞名）；`close` 与 `followup` 对进程内不存在的实例也通过 label 扫描定位。专家用内置 `report` 工具汇报，结算时主代理自动收到通知。
 
 ## 默认名册
 

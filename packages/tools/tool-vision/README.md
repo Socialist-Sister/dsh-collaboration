@@ -28,6 +28,8 @@
 | `provider` | | 覆盖默认路由 |
 | `model` | | 覆盖默认模型 |
 
+配置中另有可选的 `config.system`（每次视觉调用的系统提示）。包默认 `provider: zhipu`、`model: glm-4v-flash`（与预设/文档一致）。
+
 ## License
 
 [MIT](../../LICENSE)
