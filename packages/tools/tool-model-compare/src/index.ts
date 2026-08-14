@@ -80,7 +80,7 @@ export function apply(ctx: any, config: RawConfig) {
             type: 'object',
             additionalProperties: false,
             properties: {
-              provider: { type: 'string', required: true, description: 'Registered provider route (e.g. openai, anthropic, gemini, deepseek-official).' },
+              provider: { type: 'string', required: true, description: 'Registered provider route: deepseek-official, or a provider id the user added via 设置-模型 (e.g. zhipu).' },
               model: { type: 'string', required: true, description: 'Model id accepted by that provider.' },
               label: { type: 'string', description: 'Optional display label for the result.' },
             },

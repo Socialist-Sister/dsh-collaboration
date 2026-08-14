@@ -17,5 +17,15 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Guard: this project must NOT register LLM adapter routes — providers are
+      # connected through the official Models "Add provider" flow, and shipping
+      # adapters collides with the built-in provider catalog (DUPLICATE_DIRECTORY).
+      - name: Guard: no LLM adapters shipped
+        run: |
+          if grep -rEl 'registerAdapter|registerConfigurableProviders' packages; then
+            echo 'packages must not register LLM adapter routes' >&2
+            echo 'users add providers via the official Settings > Models UI' >&2
+            exit 1
+          fi
       - run: pnpm typecheck
       - run: pnpm build

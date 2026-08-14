@@ -12,8 +12,8 @@
 - id: tool-vision
   name: '@dsh-collaboration/tool-vision'
   config:
-    provider: gemini            # 默认视觉路由（需要安装 @dsh-collaboration/llm-gemini 等）
-    model: gemini-2.5-flash     # 默认视觉模型
+    provider: zhipu            # 默认视觉路由：官方「设置 → 模型」里已添加的供应商 ID
+    model: glm-4v-flash        # 默认视觉模型（需支持图像输入）
     maxTokens: 4096
 ```
 

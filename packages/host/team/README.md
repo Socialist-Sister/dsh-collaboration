@@ -36,9 +36,10 @@ collaboration-team:
     - { id: main, name: 主代理, role: '…' }
     - { id: planner, name: 规划师, role: '…', provider: deepseek-official, model: deepseek-v4-pro }
     - { id: looker, name: 观察员, role: '看图与 UI 分析', provider: zhipu, model: glm-4v-flash }
-    - { id: painter, name: 画家, role: '图像创作', provider: openai, model: gpt-image-1 }
+    - { id: painter, name: 画家, role: '图像创作', provider: zhipu, model: glm-4.5 }
 ```
 
+`provider` 填官方「设置 → 模型」中已添加的供应商 ID（如 `zhipu`）或 `deepseek-official`。
 `provider`/`model` 留空 = 未配置（除 `main` 外，被调用时工具会报出明确的配置提示）。
 
 ## License

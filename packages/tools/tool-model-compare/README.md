@@ -10,10 +10,11 @@
   config:
     models:                      # 默认对比集（可被调用参数替换）
       - { provider: deepseek-official, model: deepseek-v4-pro, label: DeepSeek }
-      - { provider: openai, model: gpt-4o, label: GPT-4o }
-      - { provider: anthropic, model: claude-sonnet-4, label: Claude }
+      - { provider: zhipu, model: glm-4.5, label: GLM-4.5 }
     maxTokens: 3000
 ```
+
+`provider` 填官方「设置 → 模型」中已添加的供应商 ID（如 `zhipu`）或 `deepseek-official`。
 
 ## 工具参数
 

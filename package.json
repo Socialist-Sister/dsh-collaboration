@@ -2,7 +2,7 @@
   "name": "dsh-collaboration",
   "version": "0.1.0",
   "private": true,
-  "description": "Multi-agent collaboration suite for DeepSeek Harness: external LLM adapters (OpenAI-compatible / Anthropic / Gemini), expert roundtable orchestration, same-prompt model comparison, and a multimodal vision bridge.",
+  "description": "Multi-agent collaboration suite for DeepSeek Harness: a user-configured specialist roster with on-demand dispatch (team_call / roundtable), model comparison, and a multimodal vision bridge — models come from the official provider flow, no bundled adapters.",
   "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@9.15.0",

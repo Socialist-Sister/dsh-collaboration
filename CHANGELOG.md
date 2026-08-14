@@ -2,6 +2,14 @@
 
 本文件记录 dsh-collaboration 各版本的变更（遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 精神，自 v0.1.0 起）。
 
+## [Unreleased]
+
+### 变更
+
+- **彻底移除自带 LLM 适配器，改为对接官方模型体系**：删除 `llm-openai-compatible` / `llm-anthropic` / `llm-gemini` 三个包。模型供应商一律由用户在官方「设置 → 模型 → 添加供应商」接入（OpenAI 兼容协议等），本套件的名册与工具只引用**已添加的路由**。此改动同时永久消除与内置 pi-ai 目录的路由冲突（不再注册任何 provider）。
+- **CI 防回归检查**：新增 Guard 步骤，仓库内任何包出现 `registerAdapter` / `registerConfigurableProviders` 即失败，防止再次引入路由冲突。
+- 文档全面改写为官方接入流程；删除适配器专用测试脚本（e2e-mock / e2e-adapters）。
+
 ## [v0.1.0] - 2026-08-14
 
 首个公开版本。为 DeepSeek Harness 提供多智能体协同能力：
