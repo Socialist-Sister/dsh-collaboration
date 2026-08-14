@@ -89,9 +89,9 @@ assert(compareSchema !== undefined && compareSchema.models.length === 2, 'model-
 const visionSchema = visionConfig(presetConfig.vision)
 assert(visionSchema !== undefined, 'vision: Config accepts preset profile')
 
-checkTool('@dsh-openagent/tool-roundtable', applyRoundtable, presetConfig.roundtable, 'roundtable')
-checkTool('@dsh-openagent/tool-model-compare', applyCompare, presetConfig.compare, 'model_compare')
-checkTool('@dsh-openagent/tool-vision', applyVision, presetConfig.vision, 'vision')
+checkTool('@dsh-collaboration/tool-roundtable', applyRoundtable, presetConfig.roundtable, 'roundtable')
+checkTool('@dsh-collaboration/tool-model-compare', applyCompare, presetConfig.compare, 'model_compare')
+checkTool('@dsh-collaboration/tool-vision', applyVision, presetConfig.vision, 'vision')
 
 console.log('== execute guards ==')
 {

@@ -2,7 +2,7 @@
  * `AnthropicAdapter`: fetch + SSE against the Anthropic Messages API,
  * emitting harness StreamChunks. Connection facts and the bearer token
  * resolve per request through thunks owned by the registering plugin.
- * @module @dsh-openagent/llm-anthropic/adapter
+ * @module @dsh-collaboration/llm-anthropic/adapter
  */
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import {

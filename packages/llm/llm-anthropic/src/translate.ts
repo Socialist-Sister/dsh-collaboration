@@ -4,7 +4,7 @@
  * blocks to tool calls (input JSON accumulated from `input_json_delta`
  * fragments or the block's initial `input`). Usage and finish are emitted
  * after `message_stop`.
- * @module @dsh-openagent/llm-anthropic/translate
+ * @module @dsh-collaboration/llm-anthropic/translate
  */
 import {
   CallId,

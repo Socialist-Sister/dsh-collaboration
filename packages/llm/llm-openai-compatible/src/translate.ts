@@ -2,7 +2,7 @@
  * Translate OpenAI chat-completions SSE payloads into the harness
  * `StreamChunk` protocol. One stateful harness block per content or tool
  * call index; finish reason and the latest usage are deferred to `[DONE]`.
- * @module @dsh-openagent/llm-openai-compatible/translate
+ * @module @dsh-collaboration/llm-openai-compatible/translate
  */
 import {
   CallId,

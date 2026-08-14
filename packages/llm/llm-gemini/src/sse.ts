@@ -1,7 +1,7 @@
 /**
  * Parse a Gemini SSE byte stream into data payloads. Unlike chat-completions
  * streams, Gemini sends no `[DONE]` sentinel — the stream simply ends.
- * @module @dsh-openagent/llm-gemini/sse
+ * @module @dsh-collaboration/llm-gemini/sse
  */
 import { LlmError } from '@deepseek-ai/dsh-llm'
 import { EventSourceParserStream } from 'eventsource-parser/stream'

@@ -1,5 +1,5 @@
 {
-  "name": "@dsh-openagent/tool-roundtable",
+  "name": "@dsh-collaboration/tool-roundtable",
   "version": "0.1.0",
   "description": "Expert roundtable tool for DeepSeek Harness: convene several experts (each a subagent on its own model and persona) in parallel, collect their statements, and let the main agent synthesize as chair.",
   "license": "MIT",

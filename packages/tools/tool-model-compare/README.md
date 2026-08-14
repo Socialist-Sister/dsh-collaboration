@@ -1,4 +1,4 @@
-# @dsh-openagent/tool-model-compare
+# @dsh-collaboration/tool-model-compare
 
 同题多模型对比工具 —— 一个 prompt 并发发给多个模型，答案并排返回。
 
@@ -6,7 +6,7 @@
 
 ```yaml
 - id: tool-model-compare
-  name: '@dsh-openagent/tool-model-compare'
+  name: '@dsh-collaboration/tool-model-compare'
   config:
     models:                      # 默认对比集（可被调用参数替换）
       - { provider: deepseek-official, model: deepseek-v4-pro, label: DeepSeek }

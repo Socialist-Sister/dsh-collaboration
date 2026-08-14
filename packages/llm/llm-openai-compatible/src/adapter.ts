@@ -3,7 +3,7 @@
  * chat-completions endpoint, emitting harness StreamChunks. One instance
  * serves every registered provider route; connection facts and the bearer
  * token resolve per request through thunks owned by the registering plugin.
- * @module @dsh-openagent/llm-openai-compatible/adapter
+ * @module @dsh-collaboration/llm-openai-compatible/adapter
  */
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import {

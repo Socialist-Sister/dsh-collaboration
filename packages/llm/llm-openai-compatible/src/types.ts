@@ -1,6 +1,6 @@
 /**
  * Shared option and catalog types for the OpenAI-compatible adapter.
- * @module @dsh-openagent/llm-openai-compatible/types
+ * @module @dsh-collaboration/llm-openai-compatible/types
  */
 
 /** One advisory catalog entry for a model the endpoint serves. */

@@ -1,18 +1,18 @@
-# @dsh-openagent/llm-gemini
+# @dsh-collaboration/llm-gemini
 
 Google Gemini API 适配器 —— 顶级多模态能力接入 DeepSeek Harness。
 
 ## 安装
 
 ```bash
-pnpm add -w @dsh-openagent/llm-gemini
+pnpm add -w @dsh-collaboration/llm-gemini
 ```
 
 `cordis.patch.yml` 插入：
 
 ```yaml
 - id: llm-gemini
-  name: '@dsh-openagent/llm-gemini'
+  name: '@dsh-collaboration/llm-gemini'
 ```
 
 重启后 `gemini` 路由出现在模型选择器中。

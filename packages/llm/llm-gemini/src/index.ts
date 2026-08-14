@@ -2,7 +2,7 @@
  * Register the Gemini adapter for the `gemini` provider route on
  * `ctx.llm`. Connection facts resolve per request from the optional
  * `llm-gemini` user-settings section.
- * @module @dsh-openagent/llm-gemini
+ * @module @dsh-collaboration/llm-gemini
  */
 import z from '@deepseek-ai/schemastery'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'

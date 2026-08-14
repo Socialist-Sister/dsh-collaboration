@@ -2,7 +2,7 @@
  * Shipped provider routes and their advisory model catalogs.
  * Every catalog is advisory: the adapter accepts any model id the endpoint
  * serves, and the user can replace a catalog in settings.
- * @module @dsh-openagent/llm-openai-compatible/providers
+ * @module @dsh-collaboration/llm-openai-compatible/providers
  */
 import type { ProviderRoute } from './types.js'
 

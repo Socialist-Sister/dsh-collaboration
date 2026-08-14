@@ -4,7 +4,7 @@
  * Each entry is a raw streaming `llm.stream` call (no subagent, no tools —
  * pure model comparison). All models run in parallel; one failing model
  * contributes an `error` entry without failing the others.
- * @module @dsh-openagent/tool-model-compare
+ * @module @dsh-collaboration/tool-model-compare
  */
 import z from '@deepseek-ai/schemastery'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'

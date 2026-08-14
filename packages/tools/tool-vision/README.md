@@ -1,4 +1,4 @@
-# @dsh-openagent/tool-vision
+# @dsh-collaboration/tool-vision
 
 多模态桥工具 —— 让纯文本主代理（DeepSeek）"看见"图片。
 
@@ -10,9 +10,9 @@
 
 ```yaml
 - id: tool-vision
-  name: '@dsh-openagent/tool-vision'
+  name: '@dsh-collaboration/tool-vision'
   config:
-    provider: gemini            # 默认视觉路由（需要安装 @dsh-openagent/llm-gemini 等）
+    provider: gemini            # 默认视觉路由（需要安装 @dsh-collaboration/llm-gemini 等）
     model: gemini-2.5-flash     # 默认视觉模型
     maxTokens: 4096
 ```

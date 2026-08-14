@@ -1,5 +1,5 @@
 {
-  "name": "@dsh-openagent/llm-anthropic",
+  "name": "@dsh-collaboration/llm-anthropic",
   "version": "0.1.0",
   "description": "Anthropic Messages API adapter for DeepSeek Harness: Claude models with vision support.",
   "license": "MIT",

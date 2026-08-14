@@ -1,5 +1,5 @@
 {
-  "name": "@dsh-openagent/llm-gemini",
+  "name": "@dsh-collaboration/llm-gemini",
   "version": "0.1.0",
   "description": "Google Gemini API adapter for DeepSeek Harness: multimodal Gemini models for the DeepSeek Harness LLM seam.",
   "license": "MIT",

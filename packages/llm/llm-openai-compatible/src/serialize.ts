@@ -6,7 +6,7 @@
  * messages. Assistant reasoning has no OpenAI chat-completions equivalent
  * and is omitted. Unknown declaration-merged block types fall through as
  * text-only content.
- * @module @dsh-openagent/llm-openai-compatible/serialize
+ * @module @dsh-collaboration/llm-openai-compatible/serialize
  */
 import type { ContentBlock, GenerateOptions, Message, ToolSchema } from '@deepseek-ai/dsh-llm'
 

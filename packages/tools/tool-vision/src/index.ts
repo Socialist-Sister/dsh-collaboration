@@ -8,7 +8,7 @@
  * streams one model call through the configured adapter — which serializes
  * images into that provider's wire format. The text answer comes back to the
  * main agent, which keeps working from it.
- * @module @dsh-openagent/tool-vision
+ * @module @dsh-collaboration/tool-vision
  */
 import z from '@deepseek-ai/schemastery'
 import type { ImageMediaType } from '@deepseek-ai/dsh-attachment'

@@ -1,18 +1,18 @@
-# @dsh-openagent/llm-anthropic
+# @dsh-collaboration/llm-anthropic
 
 Anthropic Messages API 适配器 —— 把 Claude 全系（含视觉）接入 DeepSeek Harness。
 
 ## 安装
 
 ```bash
-pnpm add -w @dsh-openagent/llm-anthropic
+pnpm add -w @dsh-collaboration/llm-anthropic
 ```
 
 `cordis.patch.yml` 插入：
 
 ```yaml
 - id: llm-anthropic
-  name: '@dsh-openagent/llm-anthropic'
+  name: '@dsh-collaboration/llm-anthropic'
 ```
 
 重启后 `anthropic` 路由出现在模型选择器中，可作主模型或子代理模型。

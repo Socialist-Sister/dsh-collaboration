@@ -1,4 +1,4 @@
-# @dsh-openagent/tool-roundtable
+# @dsh-collaboration/tool-roundtable
 
 专家圆桌工具 —— 多位专家（各是一个跑在自己模型上的子代理）并行发言，主代理当主持人综合结论。
 
@@ -6,7 +6,7 @@
 
 ```yaml
 - id: tool-roundtable
-  name: '@dsh-openagent/tool-roundtable'
+  name: '@dsh-collaboration/tool-roundtable'
   config:
     providerName: spawn         # 子代理后端（spawn = 全新子代理；fork = 继承父上下文）
     maxDepth: 0                 # 专家不得再向下委派

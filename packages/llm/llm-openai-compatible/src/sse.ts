@@ -1,7 +1,7 @@
 /**
  * Parse an SSE byte stream into data payloads. Yields `[DONE]` as the final
  * value and returns; throws when the stream ends without it.
- * @module @dsh-openagent/llm-openai-compatible/sse
+ * @module @dsh-collaboration/llm-openai-compatible/sse
  */
 import { LlmError } from '@deepseek-ai/dsh-llm'
 import { EventSourceParserStream } from 'eventsource-parser/stream'

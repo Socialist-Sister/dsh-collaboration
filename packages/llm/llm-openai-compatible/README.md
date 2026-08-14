@@ -1,4 +1,4 @@
-# @dsh-openagent/llm-openai-compatible
+# @dsh-collaboration/llm-openai-compatible
 
 OpenAI 兼容协议适配器 —— 一个适配器通吃所有 `/v1/chat/completions` 端点。
 
@@ -21,14 +21,14 @@ OpenAI 兼容协议适配器 —— 一个适配器通吃所有 `/v1/chat/comple
 在 DSH profile workspace 中：
 
 ```bash
-pnpm add -w @dsh-openagent/llm-openai-compatible
+pnpm add -w @dsh-collaboration/llm-openai-compatible
 ```
 
 在 `cordis.patch.yml` 中插入：
 
 ```yaml
 - id: llm-openai-compatible
-  name: '@dsh-openagent/llm-openai-compatible'
+  name: '@dsh-collaboration/llm-openai-compatible'
 ```
 
 重启 DSH。此后 `openai`/`moonshot`/`ollama`/`openrouter`/`siliconflow`/`groq` 六个路由即出现在模型选择器中，并可作为主模型或子代理模型使用。

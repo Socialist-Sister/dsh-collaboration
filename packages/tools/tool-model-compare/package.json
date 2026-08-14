@@ -1,5 +1,5 @@
 {
-  "name": "@dsh-openagent/tool-model-compare",
+  "name": "@dsh-collaboration/tool-model-compare",
   "version": "0.1.0",
   "description": "Same-prompt multi-model comparison tool for DeepSeek Harness: send one prompt to several providers/models in parallel and read the answers side by side.",
   "license": "MIT",

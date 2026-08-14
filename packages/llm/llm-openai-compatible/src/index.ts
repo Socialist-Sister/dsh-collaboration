@@ -4,7 +4,7 @@
  * `ctx.llm`. Connection facts resolve per request from the optional
  * `llm-openai` user-settings section, so a changed base URL, catalog, or
  * key reaches the very next request without restarting anything.
- * @module @dsh-openagent/llm-openai-compatible
+ * @module @dsh-collaboration/llm-openai-compatible
  */
 import z from '@deepseek-ai/schemastery'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'

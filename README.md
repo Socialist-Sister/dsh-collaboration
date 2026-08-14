@@ -1,6 +1,6 @@
 <!-- DIRECTION (approved in the planning conversation before any code was written):
-  dsh-openagent is an independent third-party open-source monorepo for DeepSeek Harness.
-  - Form: DSH-aligned multi-package monorepo (Plan A), published to npm under @dsh-openagent/*.
+  dsh-collaboration is an independent third-party open-source monorepo for DeepSeek Harness.
+  - Form: DSH-aligned multi-package monorepo (Plan A), published to npm under @dsh-collaboration/*.
   - Key decisions:
       1. LLM adapters cover three protocols: OpenAI-compatible, Anthropic Messages, Google Gemini.
       2. Multi-agent collaboration ships as PURE TOOLS (expert roundtable, model compare, vision
@@ -11,7 +11,7 @@
     official third-party extension path, so this project plugs in without touching DSH internals.
 -->
 
-# dsh-openagent
+# dsh-collaboration
 
 DeepSeek Harness 多智能体协同套件 —— 让 DeepSeek 主代理外接别家模型、组建专家团队、并借助多模态模型补齐视觉能力。
 
@@ -21,13 +21,13 @@ DeepSeek Harness 多智能体协同套件 —— 让 DeepSeek 主代理外接别
 
 | 能力 | 包 | 说明 |
 |---|---|---|
-| 外接 OpenAI 系模型 | `@dsh-openagent/llm-openai-compatible` | 一个适配器通吃 OpenAI / Moonshot / Ollama / OpenRouter / 硅基流动 / Groq / vLLM 等所有 `/v1/chat/completions` 端点，含 GPT-4o 视觉 |
-| 外接 Claude | `@dsh-openagent/llm-anthropic` | Anthropic Messages API，含 Claude 视觉 |
-| 外接 Gemini | `@dsh-openagent/llm-gemini` | Google Gemini API，顶级视觉能力 |
-| 专家圆桌 | `@dsh-openagent/tool-roundtable` | 配置化专家模板（模型+人格+系统提示），并行发言 → 主持人综合 |
-| 模型对比 | `@dsh-openagent/tool-model-compare` | 同一 prompt 并发发送多个模型，并排返回结果 |
-| 多模态桥 | `@dsh-openagent/tool-vision` | DeepSeek 主代理把图片/截图交给视觉模型，拿回文字分析 |
-| 一键预设 | `config/agent-presets/openagent` | standard 全量工具 + 上述三工具 |
+| 外接 OpenAI 系模型 | `@dsh-collaboration/llm-openai-compatible` | 一个适配器通吃 OpenAI / Moonshot / Ollama / OpenRouter / 硅基流动 / Groq / vLLM 等所有 `/v1/chat/completions` 端点，含 GPT-4o 视觉 |
+| 外接 Claude | `@dsh-collaboration/llm-anthropic` | Anthropic Messages API，含 Claude 视觉 |
+| 外接 Gemini | `@dsh-collaboration/llm-gemini` | Google Gemini API，顶级视觉能力 |
+| 专家圆桌 | `@dsh-collaboration/tool-roundtable` | 配置化专家模板（模型+人格+系统提示），并行发言 → 主持人综合 |
+| 模型对比 | `@dsh-collaboration/tool-model-compare` | 同一 prompt 并发发送多个模型，并排返回结果 |
+| 多模态桥 | `@dsh-collaboration/tool-vision` | DeepSeek 主代理把图片/截图交给视觉模型，拿回文字分析 |
+| 一键预设 | `config/agent-presets/collaboration` | standard 全量工具 + 上述三工具（显示名：协同模式） |
 
 ## 仓库结构
 
@@ -40,7 +40,7 @@ packages/
   tools/tool-model-compare/     同题多模型对比工具
   tools/tool-vision/            多模态桥工具
 config/
-  agent-presets/openagent/      开箱即用的代理预设
+  agent-presets/collaboration/  开箱即用的代理预设（协同模式）
 docs/                           安装、配置与使用文档
 ```
 
@@ -48,10 +48,10 @@ docs/                           安装、配置与使用文档
 
 见 [docs/installation.md](docs/installation.md)（开发中）。核心步骤：
 
-1. 在 DSH profile workspace 中安装适配器：`pnpm add -w @dsh-openagent/llm-openai-compatible @dsh-openagent/llm-anthropic @dsh-openagent/llm-gemini`
+1. 在 DSH profile workspace 中安装适配器：`pnpm add -w @dsh-collaboration/llm-openai-compatible @dsh-collaboration/llm-anthropic @dsh-collaboration/llm-gemini`
 2. 在 `cordis.patch.yml` 中插入适配器行，重启 DSH
 3. 在 DSH 设置面板中填写各服务商的 API key
-4. 将 `config/agent-presets/openagent` 复制到 `${DSH_HOME}/.agent-presets/`，新会话选择 `openagent` 预设
+4. 将 `config/agent-presets/collaboration` 复制到 `${DSH_HOME}/.agent-presets/`，新会话选择「协同模式」预设
 
 ## 开发
 

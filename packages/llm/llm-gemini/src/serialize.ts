@@ -6,7 +6,7 @@
  * mints ids of the shape `<name>#<n>` — the function name stays recoverable
  * from the id, which is how `functionResponse.name` correlates. Reasoning
  * has no Gemini input equivalent and is omitted.
- * @module @dsh-openagent/llm-gemini/serialize
+ * @module @dsh-collaboration/llm-gemini/serialize
  */
 import type { ContentBlock, GenerateOptions, Message, ToolSchema } from '@deepseek-ai/dsh-llm'
 

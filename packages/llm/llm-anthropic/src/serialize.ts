@@ -5,7 +5,7 @@
  * content array; assistant tool calls become `tool_use` blocks; tool
  * results become `tool_result` blocks; reasoning is dropped (the wire has
  * no assistant-side thinking input).
- * @module @dsh-openagent/llm-anthropic/serialize
+ * @module @dsh-collaboration/llm-anthropic/serialize
  */
 import type { ContentBlock, GenerateOptions, Message, ToolSchema } from '@deepseek-ai/dsh-llm'
 

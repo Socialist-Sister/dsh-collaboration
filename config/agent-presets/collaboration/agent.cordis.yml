@@ -1,9 +1,10 @@
-# The `openagent` preset: the standard full coding agent, plus the
-# dsh-openagent multi-agent collaboration tools.
+# The `collaboration` preset (display name: 协同模式): the standard full
+# coding agent, plus the
+# dsh-collaboration multi-agent collaboration tools.
 #
 # This file is an AGENT-PLANE composition (see the shipped `standard` preset
 # for the full contract commentary). Everything below the `standard` rows is
-# contributed by the dsh-openagent project:
+# contributed by the dsh-collaboration project:
 #
 #   - `tool-roundtable`   convene parallel expert subagents on their own models
 #   - `tool-model-compare` send one prompt to several models side by side
@@ -189,13 +190,13 @@
     fetch: false
     searchTimeoutMs: 60000
 
-# ── dsh-openagent collaboration tools ───────────────────────────────────────
+# ── dsh-collaboration collaboration tools ───────────────────────────────────────
 
 # 专家圆桌：多位专家（各是一个跑在自己模型上的子代理）并行发言，主代理主持综合。
 # 默认专家团走 deepseek-official 和 zhipu（智谱 GLM）；装上其他
-# @dsh-openagent/llm-* 适配器后，可把专家换成 openai/anthropic/gemini 路由。
+# @dsh-collaboration/llm-* 适配器后，可把专家换成 openai/anthropic/gemini 路由。
 - id: tool-roundtable
-  name: '@dsh-openagent/tool-roundtable'
+  name: '@dsh-collaboration/tool-roundtable'
   config:
     providerName: spawn
     maxDepth: 0
@@ -216,7 +217,7 @@
 # 同题多模型对比：一个 prompt 并发发给多个模型，答案并排返回。
 # 未安装对应适配器时，该模型条目只产生 error，不影响其余模型。
 - id: tool-model-compare
-  name: '@dsh-openagent/tool-model-compare'
+  name: '@dsh-collaboration/tool-model-compare'
   config:
     maxTokens: 3000
     models:
@@ -226,7 +227,7 @@
 
 # 多模态桥：DeepSeek 主代理把图片交给视觉模型，拿回文字分析继续工作。
 - id: tool-vision
-  name: '@dsh-openagent/tool-vision'
+  name: '@dsh-collaboration/tool-vision'
   config:
     provider: zhipu
     model: glm-4v-flash

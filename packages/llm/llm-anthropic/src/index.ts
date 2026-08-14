@@ -2,7 +2,7 @@
  * Register the Anthropic Messages adapter for the `anthropic` provider
  * route on `ctx.llm`. Connection facts resolve per request from the
  * optional `llm-anthropic` user-settings section.
- * @module @dsh-openagent/llm-anthropic
+ * @module @dsh-collaboration/llm-anthropic
  */
 import z from '@deepseek-ai/schemastery'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'

@@ -7,7 +7,7 @@
  * each statement comes back to the MAIN agent, which is the roundtable chair
  * and writes the synthesis in its own answer. One failing expert contributes
  * an `error` entry without failing the round.
- * @module @dsh-openagent/tool-roundtable
+ * @module @dsh-collaboration/tool-roundtable
  */
 import z from '@deepseek-ai/schemastery'
 import type { SubagentRun } from '@deepseek-ai/dsh-subagent'

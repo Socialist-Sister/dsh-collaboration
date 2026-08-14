@@ -3,7 +3,7 @@
  * StreamChunks. Text parts open text blocks; `functionCall` parts arrive
  * atomically and open tool-call blocks with synthetic ids (`<name>#<n>`);
  * usage and finish are emitted after the stream ends.
- * @module @dsh-openagent/llm-gemini/translate
+ * @module @dsh-collaboration/llm-gemini/translate
  */
 import {
   CallId,

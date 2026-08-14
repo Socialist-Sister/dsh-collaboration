@@ -1,7 +1,7 @@
 /**
  * `GeminiAdapter`: fetch + SSE against the Gemini
  * `streamGenerateContent` endpoint, emitting harness StreamChunks.
- * @module @dsh-openagent/llm-gemini/adapter
+ * @module @dsh-collaboration/llm-gemini/adapter
  */
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import {

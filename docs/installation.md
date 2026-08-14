@@ -1,12 +1,12 @@
 # 安装指南
 
-dsh-openagent 由两类组件构成，分别装在 DeepSeek Harness 的两个平面上：
+dsh-collaboration 由两类组件构成，分别装在 DeepSeek Harness 的两个平面上：
 
 | 组件 | 平面 | 安装位置 |
 |---|---|---|
-| `@dsh-openagent/llm-*` 三个适配器 | 宿主（host） | profile workspace + `cordis.patch.yml` |
-| `@dsh-openagent/tool-*` 三个工具 | 代理（agent preset） | `openagent` 预设行 |
-| `openagent` 预设 | 代理 | `${DSH_HOME}/.agent-presets/openagent/` |
+| `@dsh-collaboration/llm-*` 三个适配器 | 宿主（host） | profile workspace + `cordis.patch.yml` |
+| `@dsh-collaboration/tool-*` 三个工具 | 代理（agent preset） | `collaboration` 预设行 |
+| `collaboration` 预设（显示名：协同模式） | 代理 | `${DSH_HOME}/.agent-presets/collaboration/` |
 
 ## 前置条件
 
@@ -18,7 +18,7 @@ dsh-openagent 由两类组件构成，分别装在 DeepSeek Harness 的两个平
 在 profile 目录（例如 `%USERPROFILE%\.dsh\profiles\web`）执行：
 
 ```powershell
-pnpm add -w @dsh-openagent/llm-openai-compatible @dsh-openagent/llm-anthropic @dsh-openagent/llm-gemini @dsh-openagent/tool-roundtable @dsh-openagent/tool-model-compare @dsh-openagent/tool-vision
+pnpm add -w @dsh-collaboration/llm-openai-compatible @dsh-collaboration/llm-anthropic @dsh-collaboration/llm-gemini @dsh-collaboration/tool-roundtable @dsh-collaboration/tool-model-compare @dsh-collaboration/tool-vision
 ```
 
 profile workspace 使用 `nodeLinker: hoisted`，包与其依赖会被提升到 profile 根 `node_modules`，宿主行与预设行都从这里解析。
@@ -28,16 +28,16 @@ profile workspace 使用 `nodeLinker: hoisted`，包与其依赖会被提升到 
 编辑 `%USERPROFILE%\.dsh\profiles\web\cordis.patch.yml`：
 
 ```yaml
-# dsh-openagent: 外部模型适配器（宿主行；工具装在 openagent 预设里）
+# dsh-collaboration: 外部模型适配器（宿主行；工具装在「协同模式」预设里）
 - insert:
     - id: llm-openai-compatible
-      name: '@dsh-openagent/llm-openai-compatible'
+      name: '@dsh-collaboration/llm-openai-compatible'
 
     - id: llm-anthropic
-      name: '@dsh-openagent/llm-anthropic'
+      name: '@dsh-collaboration/llm-anthropic'
 
     - id: llm-gemini
-      name: '@dsh-openagent/llm-gemini'
+      name: '@dsh-collaboration/llm-gemini'
 ```
 
 不需要某个协议时删掉对应行即可（例如只用 OpenAI 系，就只留第一行）。
@@ -56,12 +56,12 @@ profile workspace 使用 `nodeLinker: hoisted`，包与其依赖会被提升到 
 
 细调（端点、模型目录、启用开关）写在 `settings.yaml` 的 `llm-openai` / `llm-anthropic` / `llm-gemini` 段，见各包 README。
 
-## 4. 安装 `openagent` 预设
+## 4. 安装「协同模式」预设（id: collaboration）
 
-把本仓库的 `config/agent-presets/openagent` 目录复制到用户预设根：
+把本仓库的 `config/agent-presets/collaboration` 目录复制到用户预设根：
 
 ```powershell
-Copy-Item -Recurse <repo>\config\agent-presets\openagent "$env:USERPROFILE\.dsh\.agent-presets\openagent"
+Copy-Item -Recurse <repo>\config\agent-presets\collaboration "$env:USERPROFILE\.dsh\.agent-presets\collaboration"
 ```
 
 （在 DSH 会话内也可以用 `agentPresets.copy` 从已装预设复制后手工加行；直接复制目录对本仓库最直接。）
@@ -71,12 +71,12 @@ Copy-Item -Recurse <repo>\config\agent-presets\openagent "$env:USERPROFILE\.dsh\
 重启 DSH（改动在启动时生效）。验证：
 
 1. 模型选择器中出现 `openai` / `moonshot` / `ollama` / `openrouter` / `siliconflow` / `groq` / `anthropic` / `gemini` 路由；
-2. 新建会话选择 `openagent` 预设，工具列表里出现 `roundtable` / `model_compare` / `vision`；
+2. 新建会话选择「协同模式」预设，工具列表里出现 `roundtable` / `model_compare` / `vision`；
 3. 若某工具的默认路由未装适配器，调用该工具时对应条目只报错，不影响其他条目。
 
 ## 6. 使用示例
 
-在 `openagent` 预设的会话里：
+在「协同模式」预设的会话里：
 
 ```
 用 roundtable 评估"把单体服务拆成微服务"这个决定，

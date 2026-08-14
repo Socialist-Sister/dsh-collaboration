@@ -1,6 +1,6 @@
 /**
  * Parse an SSE byte stream into data payloads (Anthropic event JSON).
- * @module @dsh-openagent/llm-anthropic/sse
+ * @module @dsh-collaboration/llm-anthropic/sse
  */
 import { LlmError } from '@deepseek-ai/dsh-llm'
 import { EventSourceParserStream } from 'eventsource-parser/stream'
