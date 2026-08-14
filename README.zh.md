@@ -134,10 +134,6 @@ node scripts/e2e-tools.mjs     # 新进程驱动工具包 apply()，复现预设
 node scripts/check-roster.mjs  # 校验 settings.yaml 的 collaboration-team 名册
 ```
 
-### CI 防回归
-
-CI 含 Guard 步骤：仓库内任何包出现 `registerAdapter` / `registerConfigurableProviders` 即失败——本项目**禁止捆绑模型适配器**，防止与官方目录路由冲突（历史教训见 [FIX-SUMMARY-LLM-PI-AI-CONFLICT.md](FIX-SUMMARY-LLM-PI-AI-CONFLICT.md)）。
-
 ## License
 
 [MIT](LICENSE)

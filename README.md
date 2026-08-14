@@ -152,10 +152,6 @@ node scripts/e2e-tools.mjs     # drives each tool package's apply() in a fresh p
 node scripts/check-roster.mjs  # validates the collaboration-team roster in settings.yaml
 ```
 
-### CI guard
-
-CI fails if any package calls `registerAdapter` / `registerConfigurableProviders` — this project must never bundle model adapters (route conflicts with the official catalog; history in [FIX-SUMMARY-LLM-PI-AI-CONFLICT.md](FIX-SUMMARY-LLM-PI-AI-CONFLICT.md)).
-
 ## License
 
 [MIT](LICENSE)
