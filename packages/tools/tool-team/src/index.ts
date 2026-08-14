@@ -83,8 +83,8 @@ const TEAM_STATUS_DESCRIPTION =
   'Use it before messaging or closing an instance, or when you are unsure who is still around.'
 
 const TEAM_CLOSE_DESCRIPTION =
-  'Dismiss (interrupt) one hired specialist instance by its instance id (e.g. reviewer#1). Its current turn ' +
-  'stops; the instance stops appearing as working.'
+  'Dismiss one hired specialist instance by its instance id (e.g. reviewer#1). Its current turn is interrupted, ' +
+  'it refuses further team_message deliveries, and team_status marks it as dismissed. Unknown ids fail loudly.'
 
 const ROUNDTABLE_DESCRIPTION =
   'Convene several specialists from the team roster IN PARALLEL on one topic and collect their statements. ' +
@@ -367,8 +367,9 @@ export function apply(ctx: any, config: RawConfig) {
         },
         render: (_args, value: any) => {
           if (value.instances.length === 0) return [{ type: 'text', text: '当前没有雇佣任何专家实例。' }]
-          const lines = value.instances.map((entry: any) => `- ${entry.instanceId}（${entry.name}）：${entry.status}`)
-          return [{ type: 'text', text: `在线专家（${value.instances.length}）：\n` + lines.join('\n') }]
+          const labels: Record<string, string> = { working: '工作中', settled: '已完成', dismissed: '已解散' }
+          const lines = value.instances.map((entry: any) => `- ${entry.instanceId}（${entry.name}）：${labels[entry.status] ?? entry.status}`)
+          return [{ type: 'text', text: `专家实例（${value.instances.length}）：\n` + lines.join('\n') }]
         },
       },
       timeoutMs: 30000,
@@ -409,14 +410,19 @@ export function apply(ctx: any, config: RawConfig) {
             closed: { type: 'boolean', required: true },
           },
         },
-        render: (_args, value: any) => [{ type: 'text', text: `已请求解雇 ${value.instanceId}。` }],
+        render: (_args, value: any) => [{ type: 'text', text: `已解散 ${value.instanceId}——它不再接收消息，面板中标记为已解散。` }],
       },
       timeoutMs: 30000,
       isConcurrencySafe: () => true,
       async execute(args: { instance: string }, exec: ToolRunContext) {
         const parent = requireParent(exec)
-        ctx.collaborationTeam.close(parent, args.instance)
-        return { instanceId: args.instance, closed: true }
+        try {
+          await ctx.collaborationTeam.close(parent, args.instance)
+          return { instanceId: args.instance, closed: true }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          throw new Error(message)
+        }
       },
       presentCall: (args: any) => ({ card: 'generic', title: `解雇 ${args.instance}`, kind: 'other', rawInput: {} }),
     }),

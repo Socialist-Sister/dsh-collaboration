@@ -179,7 +179,7 @@ export interface TeamInstance {
 
 /** A live view of one instance, with its current status. */
 export interface TeamInstanceView extends TeamInstance {
-  readonly status: 'working' | 'settled'
+  readonly status: 'working' | 'settled' | 'dismissed'
 }
 
 /** Options for hiring one specialist instance. */
@@ -204,8 +204,13 @@ export interface TeamService {
   spawn(parent: Agent, identityId: string, task: string, opts?: SpawnOptions): Promise<TeamInstance>
   /** Send one message from the main agent to a hired instance. */
   followup(parent: Agent, instanceId: string, message: string, signal?: AbortSignal): Promise<{ instanceId: string; messageId: MessageId }>
-  /** Interrupt one hired instance's current turn. */
-  close(parent: Agent, instanceId: string): void
+  /**
+   * Dismiss one hired instance: interrupts its current turn and marks it
+   * dismissed. Rejects with a clear error when the instance is unknown.
+   * Dismissed instances refuse further `followup`s and show as `dismissed`
+   * in `instances()`.
+   */
+  close(parent: Agent, instanceId: string): Promise<void>
   /** Live status of every instance visible to this parent (registry + persisted labels). */
   instances(parent: Agent): Promise<TeamInstanceView[]>
   /** Synchronous snapshot of instances hired in this process (for prompt sections). */
@@ -277,8 +282,13 @@ export function apply(ctx: any) {
   const promptFor = (agent: TeamAgent, task: string, extra?: string): string => buildSpecialistPrompt(agent, task, extra)
 
   // ── live instance registry (process-local cache; labels are the durable truth) ──
-  const registry = new Map<string, TeamInstance>()
+  interface LiveRecord extends TeamInstance {
+    dismissed?: boolean
+  }
+  const registry = new Map<string, LiveRecord>()
   const counters = new Map<string, number>()
+  /** Instance ids dismissed through label recovery (not in the live registry). */
+  const dismissedRecovered = new Set<string>()
 
   const workingSet = (): TeamInstance[] => [...registry.values()]
 
@@ -294,6 +304,11 @@ export function apply(ctx: any) {
       label,
       createdAt: 0,
     }
+  }
+
+  const isDismissed = (instanceId: string): boolean => {
+    const hit = registry.get(instanceId)
+    return (hit?.dismissed ?? false) || dismissedRecovered.has(instanceId)
   }
 
   const resolveChildId = async (parent: Agent, instanceId: string): Promise<SessionId> => {
@@ -346,6 +361,9 @@ export function apply(ctx: any) {
   }
 
   const followup: TeamService['followup'] = async (parent, instanceId, message, signal) => {
+    if (isDismissed(instanceId)) {
+      throw new Error(`专家实例 "${instanceId}" 已被解散，无法再发送消息。`)
+    }
     const childId = await resolveChildId(parent, instanceId)
     const messageId = await ctx.subagents.followup(parent, childId, [{ type: 'text', text: message }], {
       source: { kind: 'coordinator', form: 'relay', senderSessionId: parent.session.id },
@@ -354,17 +372,23 @@ export function apply(ctx: any) {
     return { instanceId, messageId }
   }
 
-  const close: TeamService['close'] = (parent, instanceId) => {
+  const close: TeamService['close'] = async (parent, instanceId) => {
+    const childId = await resolveChildId(parent, instanceId)
+    ctx.subagents.interrupt(childId, { kind: 'ancestor', agent: parent })
     const hit = registry.get(instanceId)
-    if (hit === undefined) return
-    ctx.subagents.interrupt(hit.childId, { kind: 'ancestor', agent: parent })
+    if (hit !== undefined) {
+      hit.dismissed = true
+    } else {
+      dismissedRecovered.add(instanceId)
+    }
   }
 
   const instances: TeamService['instances'] = async (parent) => {
     const views = new Map<string, TeamInstanceView>()
     for (const record of registry.values()) {
       const live = ctx.agents.get(record.childId)
-      views.set(record.instanceId, { ...record, status: live === undefined ? 'settled' : 'working' })
+      const status = record.dismissed ? 'dismissed' : live === undefined ? 'settled' : 'working'
+      views.set(record.instanceId, { ...record, status })
     }
     let children: { id: SessionId; label?: string }[] = []
     try {
@@ -376,7 +400,8 @@ export function apply(ctx: any) {
       const record = recordFromLabel(child.label ?? '', child.id)
       if (record === undefined || views.has(record.instanceId)) continue
       const live = ctx.agents.get(child.id)
-      views.set(record.instanceId, { ...record, status: live === undefined ? 'settled' : 'working' })
+      const status = dismissedRecovered.has(record.instanceId) ? 'dismissed' : live === undefined ? 'settled' : 'working'
+      views.set(record.instanceId, { ...record, status })
     }
     return [...views.values()]
   }

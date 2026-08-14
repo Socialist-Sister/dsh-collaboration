@@ -26,7 +26,8 @@ const ROSTER = [
 ]
 
 function makeMockCtx() {
-  const captured = { tools: [], promptSections: [], hired: [] }
+  const captured = { tools: [], promptSections: [], hired: [], dismissed: new Set() }
+  const known = () => captured.hired.map((entry) => entry.instanceId)
   const ctx = {
     collaborationTeam: {
       roster: () => ROSTER,
@@ -42,13 +43,24 @@ function makeMockCtx() {
           label: `team:${identityId}#${captured.hired.length + 1}`,
           createdAt: 1,
         }
-        captured.hired.push({ identityId, task })
+        captured.hired.push(record)
         return record
       },
-      followup: async () => ({ instanceId: 'x', messageId: 'm1' }),
-      close: () => {},
-      instances: async () => [],
-      workingSet: () => [],
+      followup: async (_parent, instanceId) => {
+        if (captured.dismissed.has(instanceId)) throw new Error(`专家实例 "${instanceId}" 已被解散，无法再发送消息。`)
+        if (!known().includes(instanceId)) throw new Error(`未知的专家实例 "${instanceId}"。`)
+        return { instanceId, messageId: 'm1' }
+      },
+      close: async (_parent, instanceId) => {
+        if (!known().includes(instanceId)) throw new Error(`未知的专家实例 "${instanceId}"——用 team_status 查看当前在线实例。`)
+        captured.dismissed.add(instanceId)
+      },
+      instances: async () =>
+        captured.hired.map((entry) => ({
+          ...entry,
+          status: captured.dismissed.has(entry.instanceId) ? 'dismissed' : 'working',
+        })),
+      workingSet: () => captured.hired,
     },
     tools: {
       register(definition) {
@@ -165,6 +177,19 @@ console.log('== @dsh-collaboration/tool-team ==')
   const teamClose = captured.tools.find((tool) => tool.name === 'team_close')
   const closeNoAgent = await teamClose.execute({ instance: 'reviewer#1' }, noAgentExec).catch((e) => e)
   assert(closeNoAgent instanceof Error && /owning agent/.test(closeNoAgent.message), 'team_close: missing agent guarded')
+
+  // Dismissal semantics: unknown ids fail loudly; dismissed instances refuse messages and show as dismissed.
+  const closeUnknown = await teamClose.execute({ instance: 'reviewer#9' }, agentExec).catch((e) => e)
+  assert(closeUnknown instanceof Error && /未知的专家实例/.test(closeUnknown.message), 'team_close: unknown id fails loudly (no fake success)')
+
+  const closed = await teamClose.execute({ instance: 'reviewer#1' }, agentExec)
+  assert(closed.closed === true, 'team_close: valid dismissal reports success')
+
+  const msgToClosed = await teamMessage.execute({ to: 'reviewer#1', message: 'hi' }, agentExec).catch((e) => e)
+  assert(msgToClosed instanceof Error && /已被解散/.test(msgToClosed.message), 'team_message: dismissed instance refuses delivery')
+
+  const status = await teamStatus.execute({}, agentExec)
+  assert(status.instances.some((entry) => entry.instanceId === 'reviewer#1' && entry.status === 'dismissed'), 'team_status: dismissed instance shows as dismissed')
 
   const roundtable = captured.tools.find((tool) => tool.name === 'roundtable')
   const emptyPanel = await roundtable.execute({ topic: 't', agents: ['main'] }, noAgentExec).catch((e) => e)
