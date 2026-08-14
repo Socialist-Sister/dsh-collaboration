@@ -192,8 +192,8 @@
 # ── dsh-openagent collaboration tools ───────────────────────────────────────
 
 # 专家圆桌：多位专家（各是一个跑在自己模型上的子代理）并行发言，主代理主持综合。
-# 默认专家团全部走 deepseek-official（无需额外适配器即可用）；装上
-# @dsh-openagent/llm-* 适配器后，把任一专家换成 openai/anthropic/gemini 路由即可。
+# 默认专家团走 deepseek-official 和 zhipu（智谱 GLM）；装上其他
+# @dsh-openagent/llm-* 适配器后，可把专家换成 openai/anthropic/gemini 路由。
 - id: tool-roundtable
   name: '@dsh-openagent/tool-roundtable'
   config:
@@ -208,6 +208,10 @@
         role: 一位偏执的安全工程师，专门找出漏洞、攻击面、数据与权限风险。
         provider: deepseek-official
         model: deepseek-v4-pro
+      - name: critic
+        role: 一位尖锐的产品评论家，从用户体验与商业价值角度质疑方案并指出盲点。
+        provider: zhipu
+        model: glm-4.5
 
 # 同题多模型对比：一个 prompt 并发发给多个模型，答案并排返回。
 # 未安装对应适配器时，该模型条目只产生 error，不影响其余模型。
@@ -217,12 +221,13 @@
     maxTokens: 3000
     models:
       - { provider: deepseek-official, model: deepseek-v4-pro, label: DeepSeek-V4-Pro }
-      - { provider: gemini, model: gemini-2.5-flash, label: Gemini-2.5-Flash }
+      - { provider: zhipu, model: glm-4.5, label: GLM-4.5 }
+      - { provider: zhipu, model: glm-4-flash, label: GLM-4-Flash }
 
 # 多模态桥：DeepSeek 主代理把图片交给视觉模型，拿回文字分析继续工作。
 - id: tool-vision
   name: '@dsh-openagent/tool-vision'
   config:
-    provider: gemini
-    model: gemini-2.5-flash
+    provider: zhipu
+    model: glm-4v-flash
     maxTokens: 4096

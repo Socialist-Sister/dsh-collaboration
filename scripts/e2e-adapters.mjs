@@ -6,11 +6,13 @@
  *   $env:OPENAI_API_KEY = 'sk-...'
  *   $env:ANTHROPIC_API_KEY = 'sk-ant-...'
  *   $env:GEMINI_API_KEY = 'AIza...'
+ *   $env:ZHIPUAI_API_KEY = '<id>.<secret>'
  *   node scripts/e2e-adapters.mjs
  *
  * Every configured provider must succeed; the script exits non-zero on the
  * first failure.
  */
+import fs from 'node:fs'
 import { OpenAiCompatibleAdapter } from '../packages/llm/llm-openai-compatible/lib/index.js'
 import { AnthropicAdapter } from '../packages/llm/llm-anthropic/lib/index.js'
 import { GeminiAdapter } from '../packages/llm/llm-gemini/lib/index.js'
@@ -109,8 +111,27 @@ if (process.env.GEMINI_API_KEY) {
   plans.push(['Gemini vision', new GeminiAdapter(config), { provider: 'gemini', model: 'gemini-2.0-flash', messages: [{ id: 'e2e-2', role: 'user', content: [{ type: 'text', text: 'What color is the image?' }, { type: 'image', attachment: IMAGE_REF }], source: { kind: 'user' } }], maxTokens: 256 }])
 }
 
+if (process.env.ZHIPUAI_API_KEY) {
+  const zhipuConfig = {
+    connectionFor(p) {
+      return { provider: p, displayName: 'ZhipuAI (GLM)', baseURL: 'https://open.bigmodel.cn/api/paas/v4', apiKeyEnv: 'ZHIPUAI_API_KEY', models: [{ id: 'glm-4v-flash', name: 'GLM-4V Flash', vision: true, contextWindow: 8192, maxTokens: 1024 }] }
+    },
+    resolveApiKey: () => Promise.resolve(process.env.ZHIPUAI_API_KEY),
+    readImage(ref) {
+      if (ref.attachmentId !== 'e2e-test-image') return Promise.resolve(undefined)
+      const data = fs.readFileSync(new URL('./test-image.png', import.meta.url))
+      return Promise.resolve(new Uint8Array(data))
+    },
+    resolveUserId: () => 'e2e',
+    fallbacks,
+    retryPolicy: () => undefined,
+  }
+  plans.push(['GLM text', new OpenAiCompatibleAdapter(zhipuConfig), { provider: 'zhipu', model: 'glm-4-flash', messages: messages(QUESTION), maxTokens: 256 }])
+  plans.push(['GLM vision', new OpenAiCompatibleAdapter(zhipuConfig), { provider: 'zhipu', model: 'glm-4v-flash', messages: [{ id: 'e2e-3', role: 'user', content: [{ type: 'text', text: 'Describe this image in one sentence: what shapes, colors and text do you see?' }, { type: 'image', attachment: { attachmentId: 'e2e-test-image', mediaType: 'image/png', bytes: 3792, width: 480, height: 320 } }], source: { kind: 'user' } }], maxTokens: 512 }])
+}
+
 if (plans.length === 0) {
-  console.error('No API keys configured: export OPENAI_API_KEY / ANTHROPIC_API_KEY / GEMINI_API_KEY')
+  console.error('No API keys configured: export OPENAI_API_KEY / ANTHROPIC_API_KEY / GEMINI_API_KEY / ZHIPUAI_API_KEY')
   process.exit(2)
 }
 

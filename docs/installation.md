@@ -49,6 +49,7 @@ profile workspace 使用 `nodeLinker: hoisted`，包与其依赖会被提升到 
 | 路由 | 环境变量 |
 |---|---|
 | `openai` / `moonshot` / `openrouter` / `siliconflow` / `groq` | `OPENAI_API_KEY` / `MOONSHOT_API_KEY` / `OPENROUTER_API_KEY` / `SILICONFLOW_API_KEY` / `GROQ_API_KEY` |
+| `zhipu`（智谱 GLM，含 GLM-4.5V / GLM-4V 视觉） | `ZHIPUAI_API_KEY` |
 | `ollama` | 无需密钥 |
 | `anthropic` | `ANTHROPIC_API_KEY` |
 | `gemini` | `GEMINI_API_KEY` |

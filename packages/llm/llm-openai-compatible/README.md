@@ -11,6 +11,7 @@ OpenAI 兼容协议适配器 —— 一个适配器通吃所有 `/v1/chat/comple
 | `ollama` | Ollama 本地（无需密钥） | `http://localhost:11434/v1` | — |
 | `openrouter` | OpenRouter（含 Claude/Gemini 视觉） | `https://openrouter.ai/api/v1` | `OPENROUTER_API_KEY` |
 | `siliconflow` | 硅基流动（含 Qwen-VL 视觉） | `https://api.siliconflow.cn/v1` | `SILICONFLOW_API_KEY` |
+| `zhipu` | 智谱 GLM（含 GLM-4.5V / GLM-4V 视觉） | `https://open.bigmodel.cn/api/paas/v4` | `ZHIPUAI_API_KEY` |
 | `groq` | Groq | `https://api.groq.com/openai/v1` | `GROQ_API_KEY` |
 
 内置目录仅作建议：适配器接受端点支持的任何模型 id，视觉模型请在其条目上标 `vision: true`。

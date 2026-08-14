@@ -69,6 +69,19 @@ export const PROVIDER_ROUTES: readonly ProviderRoute[] = [
     ],
   },
   {
+    id: 'zhipu',
+    displayName: 'ZhipuAI (GLM)',
+    defaultBaseURL: 'https://open.bigmodel.cn/api/paas/v4',
+    defaultApiKeyEnv: 'ZHIPUAI_API_KEY',
+    defaultModels: [
+      { id: 'glm-4.5', name: 'GLM-4.5', contextWindow: 128000, maxTokens: 8192 },
+      { id: 'glm-4-flash', name: 'GLM-4 Flash (free)', contextWindow: 128000, maxTokens: 4096 },
+      { id: 'glm-4-air', name: 'GLM-4 Air', contextWindow: 128000, maxTokens: 4096 },
+      { id: 'glm-4.5v', name: 'GLM-4.5V', contextWindow: 128000, maxTokens: 8192, vision: true },
+      { id: 'glm-4v-flash', name: 'GLM-4V Flash (free)', contextWindow: 8192, maxTokens: 4096, vision: true },
+    ],
+  },
+  {
     id: 'groq',
     displayName: 'Groq',
     defaultBaseURL: 'https://api.groq.com/openai/v1',

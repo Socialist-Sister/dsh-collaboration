@@ -58,6 +58,7 @@ export interface OpenAiConfigSchema {
   ollama?: RouteProfileOutput | null
   openrouter?: RouteProfileOutput | null
   siliconflow?: RouteProfileOutput | null
+  zhipu?: RouteProfileOutput | null
   groq?: RouteProfileOutput | null
   maxTokens?: number | null
   defaultContextWindow?: number | null
@@ -78,6 +79,7 @@ export const Config: z<OpenAiConfigSchema> = z.object({
   ollama: RouteProfile,
   openrouter: RouteProfile,
   siliconflow: RouteProfile,
+  zhipu: RouteProfile,
   groq: RouteProfile,
   maxTokens: z.number().step(1).min(1).default(DEFAULT_MAX_TOKENS),
   defaultContextWindow: z.number().step(1).min(1).default(DEFAULT_CONTEXT_WINDOW),
