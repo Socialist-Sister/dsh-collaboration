@@ -1,0 +1,10 @@
+node_modules/
+lib/
+dist/
+*.tsbuildinfo
+*.log
+.env
+.env.local
+.DS_Store
+research/
+.dsh/

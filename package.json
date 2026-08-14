@@ -1,0 +1,22 @@
+{
+  "name": "dsh-openagent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Multi-agent collaboration suite for DeepSeek Harness: external LLM adapters (OpenAI-compatible / Anthropic / Gemini), expert roundtable orchestration, same-prompt model comparison, and a multimodal vision bridge.",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm -r --if-present build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "clean": "pnpm -r exec rimraf lib dist"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3"
+  }
+}

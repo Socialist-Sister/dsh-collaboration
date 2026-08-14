@@ -1,0 +1,45 @@
+{
+  "name": "@dsh-openagent/llm-openai-compatible",
+  "version": "0.1.0",
+  "description": "OpenAI-compatible chat-completions adapter for DeepSeek Harness: OpenAI, Moonshot, Ollama, OpenRouter, SiliconFlow, Groq and custom /v1 endpoints, with vision support.",
+  "license": "MIT",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --out-dir lib",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-anonymous-user-id": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-attachment": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-credentials": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-launch-environment": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-llm": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-settings": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-timeout": "^0.1.0-rc.6",
+    "@deepseek-ai/schemastery": "^3.18.1",
+    "eventsource-parser": "^3.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3"
+  },
+  "peerDependenciesMeta": {},
+  "engines": {
+    "node": ">=20"
+  }
+}
