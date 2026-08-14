@@ -21,22 +21,24 @@ DeepSeek Harness 多智能体协同套件 —— 让 DeepSeek 主代理外接别
 
 | 能力 | 包 | 说明 |
 |---|---|---|
-| 外接 OpenAI 系模型 | `@dsh-collaboration/llm-openai-compatible` | 一个适配器通吃 OpenAI / Moonshot / Ollama / OpenRouter / 硅基流动 / Groq / vLLM 等所有 `/v1/chat/completions` 端点，含 GPT-4o 视觉 |
+| 专家名册 | `@dsh-collaboration/team` | 预设一组各司其职的身份（主代理/规划师/工程师/调试员/审查员/研究员/评论家/写手/观察员/画家），每个身份的模型由你在 settings.yaml 自行配置 |
+| 按需点名 | `@dsh-collaboration/tool-team` | `team_call` 点名单个专项专家；`roundtable` 并行召集多位专家；名册实时展示给主代理 |
+| 外接 OpenAI 系模型 | `@dsh-collaboration/llm-openai-compatible` | 一个适配器通吃 OpenAI / Moonshot / Ollama / OpenRouter / 硅基流动 / 智谱 GLM / Groq / vLLM 等所有 `/v1/chat/completions` 端点，含 GPT-4o / GLM-V 视觉 |
 | 外接 Claude | `@dsh-collaboration/llm-anthropic` | Anthropic Messages API，含 Claude 视觉 |
 | 外接 Gemini | `@dsh-collaboration/llm-gemini` | Google Gemini API，顶级视觉能力 |
-| 专家圆桌 | `@dsh-collaboration/tool-roundtable` | 配置化专家模板（模型+人格+系统提示），并行发言 → 主持人综合 |
 | 模型对比 | `@dsh-collaboration/tool-model-compare` | 同一 prompt 并发发送多个模型，并排返回结果 |
 | 多模态桥 | `@dsh-collaboration/tool-vision` | DeepSeek 主代理把图片/截图交给视觉模型，拿回文字分析 |
-| 一键预设 | `config/agent-presets/collaboration` | standard 全量工具 + 上述三工具（显示名：协同模式） |
+| 一键预设 | `config/agent-presets/collaboration` | standard 全量工具 + 上述工具（显示名：协同模式） |
 
 ## 仓库结构
 
 ```
 packages/
+  host/team/                     专家名册（settings.yaml 可配置）
   llm/llm-openai-compatible/    OpenAI 兼容协议适配器
   llm/llm-anthropic/            Anthropic Messages 适配器
   llm/llm-gemini/               Gemini 适配器
-  tools/tool-roundtable/        专家圆桌工具
+  tools/tool-team/              按需点名 + 专家圆桌
   tools/tool-model-compare/     同题多模型对比工具
   tools/tool-vision/            多模态桥工具
 config/

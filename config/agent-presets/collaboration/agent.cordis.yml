@@ -192,27 +192,14 @@
 
 # ── dsh-collaboration collaboration tools ───────────────────────────────────────
 
-# 专家圆桌：多位专家（各是一个跑在自己模型上的子代理）并行发言，主代理主持综合。
-# 默认专家团走 deepseek-official 和 zhipu（智谱 GLM）；装上其他
-# @dsh-collaboration/llm-* 适配器后，可把专家换成 openai/anthropic/gemini 路由。
-- id: tool-roundtable
-  name: '@dsh-collaboration/tool-roundtable'
+# 专家团队：名册（各身份的人设与模型）由宿主行 @dsh-collaboration/team 提供，
+# 用户在 settings.yaml 的 collaboration-team 段自行配置。
+# team_call 点名单个专家；roundtable 并行召集多位专家发言。
+- id: tool-team
+  name: '@dsh-collaboration/tool-team'
   config:
     providerName: spawn
     maxDepth: 0
-    experts:
-      - name: architect
-        role: 一位资深软件架构师，擅长系统设计权衡、模块边界与长期可维护性。
-        provider: deepseek-official
-        model: deepseek-v4-pro
-      - name: security
-        role: 一位偏执的安全工程师，专门找出漏洞、攻击面、数据与权限风险。
-        provider: deepseek-official
-        model: deepseek-v4-pro
-      - name: critic
-        role: 一位尖锐的产品评论家，从用户体验与商业价值角度质疑方案并指出盲点。
-        provider: zhipu
-        model: glm-4.5
 
 # 同题多模型对比：一个 prompt 并发发给多个模型，答案并排返回。
 # 未安装对应适配器时，该模型条目只产生 error，不影响其余模型。

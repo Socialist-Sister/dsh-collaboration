@@ -1,3 +1,4 @@
 packages:
   - packages/llm/*
   - packages/tools/*
+  - packages/host/*

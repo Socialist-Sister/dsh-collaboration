@@ -5,7 +5,8 @@ dsh-collaboration 由两类组件构成，分别装在 DeepSeek Harness 的两�
 | 组件 | 平面 | 安装位置 |
 |---|---|---|
 | `@dsh-collaboration/llm-*` 三个适配器 | 宿主（host） | profile workspace + `cordis.patch.yml` |
-| `@dsh-collaboration/tool-*` 三个工具 | 代理（agent preset） | `collaboration` 预设行 |
+| `@dsh-collaboration/team` 专家名册 | 宿主（host） | profile workspace + `cordis.patch.yml`；名册本体在 `settings.yaml` |
+| `@dsh-collaboration/tool-*` 工具 | 代理（agent preset） | `collaboration` 预设行 |
 | `collaboration` 预设（显示名：协同模式） | 代理 | `${DSH_HOME}/.agent-presets/collaboration/` |
 
 ## 前置条件
@@ -18,7 +19,7 @@ dsh-collaboration 由两类组件构成，分别装在 DeepSeek Harness 的两�
 在 profile 目录（例如 `%USERPROFILE%\.dsh\profiles\web`）执行：
 
 ```powershell
-pnpm add -w @dsh-collaboration/llm-openai-compatible @dsh-collaboration/llm-anthropic @dsh-collaboration/llm-gemini @dsh-collaboration/tool-roundtable @dsh-collaboration/tool-model-compare @dsh-collaboration/tool-vision
+pnpm add -w @dsh-collaboration/llm-openai-compatible @dsh-collaboration/llm-anthropic @dsh-collaboration/llm-gemini @dsh-collaboration/team @dsh-collaboration/tool-team @dsh-collaboration/tool-model-compare @dsh-collaboration/tool-vision
 ```
 
 profile workspace 使用 `nodeLinker: hoisted`，包与其依赖会被提升到 profile 根 `node_modules`，宿主行与预设行都从这里解析。
@@ -38,9 +39,27 @@ profile workspace 使用 `nodeLinker: hoisted`，包与其依赖会被提升到 
 
     - id: llm-gemini
       name: '@dsh-collaboration/llm-gemini'
+
+    - id: collaboration-team
+      name: '@dsh-collaboration/team'
 ```
 
 不需要某个协议时删掉对应行即可（例如只用 OpenAI 系，就只留第一行）。
+
+## 2.5 配置专家名册（settings.yaml）
+
+`team` 行提供默认名册（主代理/规划师/工程师/调试员/审查员/研究员/评论家/写手 + 未配置的观察员/画家）。在 `settings.yaml` 的 `collaboration-team` 段整体替换，**改完即生效**：
+
+```yaml
+collaboration-team:
+  agents:
+    - { id: main, name: 主代理, role: 统筹全局、按需调用专家 }
+    - { id: planner, name: 规划师, role: 拆解任务, provider: deepseek-official, model: deepseek-v4-flash }
+    - { id: looker, name: 观察员, role: 看图与 UI 分析, provider: zhipu, model: glm-4v-flash }
+    - { id: painter, name: 画家, role: 图像创作, provider: openai, model: gpt-image-1 }
+```
+
+`provider`/`model` 留空 = 未配置（除 `main` 外，被 `team_call` 调用时工具会报出明确的配置提示）。
 
 ## 3. 配置 API 密钥
 
@@ -71,7 +90,7 @@ Copy-Item -Recurse <repo>\config\agent-presets\collaboration "$env:USERPROFILE\.
 重启 DSH（改动在启动时生效）。验证：
 
 1. 模型选择器中出现 `openai` / `moonshot` / `ollama` / `openrouter` / `siliconflow` / `groq` / `anthropic` / `gemini` 路由；
-2. 新建会话选择「协同模式」预设，工具列表里出现 `roundtable` / `model_compare` / `vision`；
+2. 新建会话选择「协同模式」预设，工具列表里出现 `team_call` / `roundtable` / `model_compare` / `vision`；
 3. 若某工具的默认路由未装适配器，调用该工具时对应条目只报错，不影响其他条目。
 
 ## 6. 使用示例
@@ -79,14 +98,13 @@ Copy-Item -Recurse <repo>\config\agent-presets\collaboration "$env:USERPROFILE\.
 在「协同模式」预设的会话里：
 
 ```
-用 roundtable 评估"把单体服务拆成微服务"这个决定，
-专家用 architect（deepseek-v4-pro）和 security（claude-sonnet-4），
-最后给我一个综合结论。
+用 team_call 让 reviewer 审查我刚写的认证模块，指出安全风险。
 
-用 model_compare 对比 gpt-4o、claude-sonnet-4、gemini-2.5-flash
-对"如何给一个 npm 库设计插件机制"的回答。
+把 docs/screenshot.png 交给 looker，让他描述这张 UI 截图里的布局和问题。
 
-把 docs/screenshot.png 交给 vision：帮我描述这张 UI 截图里的布局和问题。
+开个 roundtable（planner、reviewer、critic）评估"把单体服务拆成微服务"这个决定。
+
+用 model_compare 对比 glm-4.5 和 glm-4-flash 对"如何给一个 npm 库设计插件机制"的回答。
 ```
 
 ## 故障排查
