@@ -1,6 +1,6 @@
 {
   "name": "@dsh-collaboration/team",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Named specialist roster for DeepSeek Harness: user-configurable agent identities (each with its own role, persona and model) published as a host service for collaboration tools.",
   "license": "MIT",
   "type": "module",

@@ -1,8 +1,17 @@
 # Changelog
 
-本文件记录 dsh-collaboration 各版本的变更（遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 精神，自 v0.1.0 起）。
+本文件记录 dsh-collaboration 各版本的变更（遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 精神）。
 
-## [Unreleased]
+## [v0.1.1] - 2026-08-14
+
+### 变更
+
+- **专家模型语义：留空 = 跟随主模型**。名册里未填 `provider`/`model` 的身份不再报"未配置"错误，而是跟随当前会话主模型（聊天框选择器）执行；想给某身份单独配模型时才在 `settings.yaml` 的 `collaboration-team` 段填上。名册因此零配置可用。
+  - `@dsh-collaboration/team` 0.1.1：`configured()` 语义更新、注释更新。
+  - `@dsh-collaboration/tool-team` 0.1.1：`team_call` 仅在身份钉住模型时下发 `agentOptions`；`roundtable` 默认召集全部非 main 身份；名册提示段对未钉模型的身份显示「跟随主模型」。
+- 提示：视觉身份（观察员）建议在 settings.yaml 钉一个视觉模型（如 `zhipu/glm-4v-flash`），否则它会跟随纯文本主模型、看图时在运行时报错。
+
+## [v0.1.0] - 2026-08-14（重新发布）
 
 ### 变更
 
@@ -10,24 +19,9 @@
 - **CI 防回归检查**：新增 Guard 步骤，仓库内任何包出现 `registerAdapter` / `registerConfigurableProviders` 即失败，防止再次引入路由冲突。
 - 文档全面改写为官方接入流程；删除适配器专用测试脚本（e2e-mock / e2e-adapters）。
 
-## [v0.1.0] - 2026-08-14
+## [v0.1.0-alpha] - 2026-08-14（已撤回的初版）
 
-首个公开版本。为 DeepSeek Harness 提供多智能体协同能力：
+### 新增（历史记录）
 
-### 新增
-
-- **`@dsh-collaboration/team`** — 专家名册宿主包：`collaboration-team` settings 命名空间 + `collaborationTeam` 服务。默认十身份（主代理/规划师/工程师/调试员/审查员/研究员/评论家/写手/观察员/画家），每身份的模型由用户在 `settings.yaml` 自行配置，改完即生效；观察员/画家默认留空待配。
-- **`@dsh-collaboration/tool-team`** — `team_call`（点名单个专项专家，以其人设+其模型作为子代理执行）+ `roundtable`（并行召集多位专家发言，主代理主持综合）；名册以系统提示段实时展示给主代理。
-- **`@dsh-collaboration/llm-openai-compatible`** — OpenAI 兼容协议适配器，内置路由：openai / moonshot / ollama / openrouter / siliconflow / zhipu（智谱 GLM）/ groq，支持视觉模型的 `image_url` 编码。
-- **`@dsh-collaboration/llm-anthropic`** — Anthropic Messages API 适配器（Claude 全系，含视觉）。
-- **`@dsh-collaboration/llm-gemini`** — Google Gemini API 适配器（多模态）。
-- **`@dsh-collaboration/tool-model-compare`** — 同题多模型对比工具。
-- **`@dsh-collaboration/tool-vision`** — 多模态桥工具：纯文本主代理把图片交给视觉模型，拿回文字分析。
-- **`collaboration` 代理预设**（显示名：协同模式）— standard 全量工具 + 上述工具。
-
-### 验证
-
-- 三协议适配器通过本地 mock 供应商服务器的全链路断言（鉴权、序列化、SSE、usage/错误映射、视觉编码）；
-- 智谱 GLM 真实 API 端到端测试通过（文本 + glm-4v-flash 多模态识图）；
-- 工具包通过新进程 apply() 校验（参数 DSL、守卫、名册提示段）；
-- GitHub Actions CI 全绿（typecheck + build）。
+- `@dsh-collaboration/team`（专家名册）、`@dsh-collaboration/tool-team`（team_call / roundtable）、`@dsh-collaboration/tool-model-compare`、`@dsh-collaboration/tool-vision`、`collaboration` 预设。
+- 初版自带 `llm-openai-compatible` / `llm-anthropic` / `llm-gemini` 三个适配器；因与新版 DSH 内置 pi-ai 目录路由冲突（DUPLICATE_DIRECTORY），在 v0.1.0 重发布时移除。适配器时期通过 mock 协议全链路断言与智谱 GLM 真实 API（含 glm-4v-flash 识图）验证过序列化/视觉编码等逻辑。

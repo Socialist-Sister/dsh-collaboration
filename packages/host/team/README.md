@@ -23,8 +23,8 @@
 | `researcher` | 研究员 | deepseek-official / deepseek-v4-flash |
 | `critic` | 评论家 | deepseek-official / deepseek-v4-flash |
 | `writer` | 写手 | deepseek-official / deepseek-v4-flash |
-| `looker` | 观察员（多模态） | **未配置，待你设置**（如 zhipu / glm-4v-flash） |
-| `painter` | 画家（图像创作） | **未配置，待你设置**（如接入 gpt-image 类模型） |
+| `looker` | 观察员（多模态） | **跟随主模型**（建议配视觉模型，如 zhipu / glm-4v-flash） |
+| `painter` | 画家（图像创作） | **跟随主模型**（建议配图像模型） |
 
 ## 自定义名册
 
@@ -40,7 +40,8 @@ collaboration-team:
 ```
 
 `provider` 填官方「设置 → 模型」中已添加的供应商 ID（如 `zhipu`）或 `deepseek-official`。
-`provider`/`model` 留空 = 未配置（除 `main` 外，被调用时工具会报出明确的配置提示）。
+`provider`/`model` 留空 = 跟随主模型（聊天框选择器）；给某身份单独配模型才填。
+视觉身份建议配视觉模型，否则跟随纯文本主模型时看图会报错。
 
 ## License
 

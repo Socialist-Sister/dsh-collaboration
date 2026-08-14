@@ -113,7 +113,7 @@ console.log('== @dsh-collaboration/tool-team ==')
   if (section !== undefined) {
     assert(section.name !== undefined && section.order === 150, 'roster section at order 150')
     const text = typeof section.text === 'function' ? section.text({}) : section.text
-    assert(text.includes('planner') && text.includes('未配置') && text.includes('looker'), 'roster text renders identities and unconfigured state')
+    assert(text.includes('planner') && text.includes('跟随主模型') && text.includes('looker'), 'roster text renders identities and follow-model state')
   }
 
   const teamCall = captured.tools.find((tool) => tool.name === 'team_call')
@@ -122,8 +122,10 @@ console.log('== @dsh-collaboration/tool-team ==')
   const unknown = await teamCall.execute({ agent: 'nobody', task: 'x' }, exec).catch((e) => e)
   assert(unknown instanceof Error && /未知专家/.test(unknown.message) && unknown.message.includes('planner'), 'team_call: unknown id lists roster')
 
-  const unconfigured = await teamCall.execute({ agent: 'looker', task: 'x' }, exec).catch((e) => e)
-  assert(unconfigured instanceof Error && /尚未配置模型/.test(unconfigured.message) && unconfigured.message.includes('collaboration-team'), 'team_call: unconfigured identity names the settings fix')
+  // An identity without a pinned model FOLLOWS the session model — it no
+  // longer errors at resolution; it proceeds to the agent guard instead.
+  const followModel = await teamCall.execute({ agent: 'looker', task: 'x' }, exec).catch((e) => e)
+  assert(followModel instanceof Error && /owning agent/.test(followModel.message), 'team_call: empty model follows session (agent guard, not config error)')
 
   const noAgent = await teamCall.execute({ agent: 'planner', task: 'x' }, exec).catch((e) => e)
   assert(noAgent instanceof Error && /owning agent/.test(noAgent.message), 'team_call: missing agent guarded')

@@ -9,9 +9,10 @@
  * roster through the service, so a user can re-point any identity at another
  * model (or clear it back to unconfigured) without touching a preset.
  *
- * Identities with an empty `provider`/`model` are UNCONFIGURED: calling one
- * through a tool produces a clear error instead of silently inheriting —
- * except `main`, which deliberately inherits the session's own model.
+ * Identities with an empty `provider`/`model` FOLLOW THE SESSION MODEL (the
+ * chat-box selector): the roster works with zero configuration, and a user
+ * pins `provider`/`model` only for the identities that deserve their own
+ * model (e.g. a vision model for `looker`).
  * @module @dsh-collaboration/team
  */
 import z from '@deepseek-ai/schemastery'
@@ -32,19 +33,21 @@ export interface TeamAgent {
   role: string
   /** Optional extra persona text, appended after `role` in the child prompt. */
   persona?: string
-  /** Provider route this identity runs on; empty = unconfigured. */
+  /** Provider route this identity runs on; empty = follows the session model. */
   provider?: string
-  /** Model id this identity runs; empty = unconfigured. */
+  /** Model id this identity runs; empty = follows the session model. */
   model?: string
   /** Optional per-request output cap for this identity. */
   maxTokens?: number
 }
 
 /**
- * The default roster. `main` is the session's own agent (inherits its
- * model); `looker` and `painter` ship unconfigured so the user picks their
- * vision / image models; every other identity defaults to the cheap
- * deepseek-v4-flash route — the user re-points any of them in settings.
+ * The default roster. `main` is the session's own agent; every identity
+ * with an EMPTY provider/model FOLLOWS the session's model (the chat-box
+ * selector) — pinning one in settings.yaml gives that identity its own
+ * model. `looker` and `painter` ship empty so the user picks suitable
+ * vision / image models; the other identities default to the cheap
+ * deepseek-v4-flash route, re-pointable at any time.
  */
 export const DEFAULT_ROSTER: readonly TeamAgent[] = [
   {
@@ -183,9 +186,9 @@ export function apply(ctx: any) {
     resolve(id: string): TeamAgent | undefined {
       return roster().find((agent) => agent.id === id)
     },
-    /** Whether one identity has a routable provider/model (`main` inherits). */
+    /** Whether one identity pins its own model (empty = follows the session model). */
     configured(agent: TeamAgent): boolean {
-      return agent.id === 'main' || (agent.provider !== undefined && agent.model !== undefined)
+      return agent.provider !== undefined && agent.model !== undefined
     },
   })
 }

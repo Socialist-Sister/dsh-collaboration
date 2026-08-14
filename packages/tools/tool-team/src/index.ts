@@ -5,9 +5,9 @@
  * (the `@dsh-collaboration/team` row) and registers two model-facing tools:
  *
  *   - `team_call`:  point one NAMED specialist at a task. The specialist runs
- *     as a one-shot subagent with its own persona and its own provider/model
- *     (from the roster; `main` inherits the session model).
- *   - `roundtable`: convene several (default: all configured) specialists on
+ *     as a one-shot subagent with its own persona; it follows the session
+ *     model unless the roster pins a provider/model for it.
+ *   - `roundtable`: convene several (default: all non-main) specialists on
  *     one topic in parallel; the main agent chairs the synthesis.
  *
  * A system-prompt section renders the live roster at every assembly so the
@@ -47,10 +47,10 @@ const TEAM_CALL_DESCRIPTION =
   'Call ONE named specialist from the team roster to handle a task, and get its answer back. ' +
   'Use this whenever the current work needs a specific expertise you do not have: point `agent` at the ' +
   'specialist id (e.g. reviewer for a security pass, looker for anything visual, debugger for a stuck bug). ' +
-  'The specialist runs on its own configured model with its own duty and persona; you receive its final ' +
-  'statement and stay in charge of the overall task. Pick the SINGLE best specialist per call; use ' +
-  '`roundtable` when you want several perspectives at once. An unconfigured specialist reports what the ' +
-  'user must fill in settings.yaml.'
+  'The specialist runs with its own duty and persona; one without a pinned model follows the session ' +
+  'model, while a pinned one (settings.yaml collaboration-team) runs on its own provider/model. ' +
+  'You receive its final statement and stay in charge of the overall task. Pick the SINGLE best specialist ' +
+  'per call; use `roundtable` when you want several perspectives at once.'
 
 const ROUNDTABLE_DESCRIPTION =
   'Convene several specialists from the team roster IN PARALLEL on one topic and collect their statements. ' +
@@ -77,11 +77,11 @@ function renderRoster(roster: AgentRef[]): string {
   ]
   for (const agent of roster) {
     const model =
-      agent.id === 'main'
-        ? '（本会话主模型）'
-        : agent.provider !== undefined && agent.model !== undefined
-          ? `（${agent.provider}/${agent.model}）`
-          : '（未配置模型，调用会报错——用户需在 settings.yaml 的 collaboration-team 段配置）'
+      agent.provider !== undefined && agent.model !== undefined
+        ? `（${agent.provider}/${agent.model}）`
+        : agent.id === 'main'
+          ? '（本会话主模型）'
+          : '（跟随主模型；可在 settings.yaml 的 collaboration-team 段单独指定）'
     lines.push(`- ${agent.id} — ${agent.name}${model}：${agent.role}`)
   }
   return lines.join('\n')
@@ -107,11 +107,6 @@ export function apply(ctx: any, config: RawConfig) {
     if (found === undefined) {
       throw new Error(`未知专家 "${id}"。当前名册：${formatRosterIds(roster())}。`)
     }
-    if (id !== 'main' && (found.provider === undefined || found.model === undefined)) {
-      throw new Error(
-        `专家 "${found.name}（${id}）" 尚未配置模型：请在 settings.yaml 的 collaboration-team 段为该身份设置 provider 与 model（例如 provider: zhipu, model: glm-4v-flash）。`,
-      )
-    }
     return found
   }
 
@@ -125,7 +120,7 @@ export function apply(ctx: any, config: RawConfig) {
         prompt: [{ type: 'text', text: prompt }],
         parent,
         signal: exec.signal,
-        ...(agent.id !== 'main'
+        ...(agent.provider !== undefined && agent.model !== undefined
           ? {
               agentOptions: {
                 provider: agent.provider,
@@ -224,7 +219,7 @@ export function apply(ctx: any, config: RawConfig) {
         agents: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Specialist ids to convene; omitted = every configured specialist (main excluded).',
+          description: 'Specialist ids to convene; omitted = every specialist (main excluded).',
         },
         background: {
           type: 'string',
@@ -278,9 +273,9 @@ export function apply(ctx: any, config: RawConfig) {
                 if (found === undefined) throw new Error(`未知专家 "${id}"。当前名册：${formatRosterIds(all)}。`)
                 return found
               })
-            : all.filter((agent) => agent.provider !== undefined && agent.model !== undefined)
+            : all
         if (selected.length === 0) {
-          throw new Error('roundtable: 没有可召集的专家——名册里没有任何已配置模型的专家（main 除外）。')
+          throw new Error('roundtable: 没有可召集的专家——名册里没有任何专家（main 除外）。')
         }
         const statements = await Promise.all(
           selected.map(async (agent) => {

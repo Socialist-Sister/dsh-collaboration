@@ -69,8 +69,8 @@ collaboration-team:
 ```
 
 - `provider` 填**第 3 步创建的供应商 ID**（如 `zhipu`）或 `deepseek-official`
-- `provider`/`model` 留空 = 未配置（除 `main` 外，被 `team_call` 调用时工具会报出明确的配置提示）
-- 视觉身份（观察员）建议配一个支持视觉的模型（如 `zhipu/glm-4v-flash`）
+- `provider`/`model` **留空 = 跟随主模型**（聊天框右下角选择器选的模型）；想给某身份单独配模型才填
+- 视觉身份（观察员）建议配一个支持视觉的模型（如 `zhipu/glm-4v-flash`），否则它跟随纯文本主模型、看图时报错
 
 ## 5. 安装「协同模式」预设（id: collaboration）
 

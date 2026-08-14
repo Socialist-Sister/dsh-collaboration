@@ -1,6 +1,6 @@
 {
   "name": "@dsh-collaboration/tool-team",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Specialist team tools for DeepSeek Harness: team_call dispatches one named specialist from the user-configured roster; roundtable convenes several in parallel. The main agent is the chair.",
   "license": "MIT",
   "type": "module",
