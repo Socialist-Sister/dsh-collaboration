@@ -2,6 +2,13 @@
 
 本文件记录 dsh-collaboration 各版本的变更（遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 精神）。
 
+## [v0.1.2] - 2026-08-14
+
+### 修复
+
+- **`maxDepth` 默认值 0 → 1**：子代理深度从 1 起算，`maxDepth: 0` 会让主代理的 `team_call`/`roundtable` 全部被拒（`subagent depth 1 exceeds maxDepth 0`）。活体探针在真实重启后发现并修复；`1` 的语义为「专家可被召集、但不得再向下委派」。预设行同步改为 `maxDepth: 1`。
+- 本次由真实端到端探针验证：spawn 子代理 + `agentOptions` 模型覆盖 + 真实 DeepSeek API 调用全链路通过。
+
 ## [v0.1.1] - 2026-08-14
 
 ### 变更

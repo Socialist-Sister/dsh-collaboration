@@ -78,7 +78,7 @@ function checkTool(packageName, apply, config, toolName) {
 }
 
 const presetConfig = {
-  team: { providerName: 'spawn', maxDepth: 0 },
+  team: { providerName: 'spawn', maxDepth: 1 },
   compare: {
     maxTokens: 3000,
     models: [

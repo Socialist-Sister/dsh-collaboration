@@ -20,7 +20,7 @@
   name: '@dsh-collaboration/tool-team'
   config:
     providerName: spawn
-    maxDepth: 0
+    maxDepth: 1        # 必须 >= 1：主代理的专家子代理深度为 1；1 = 专家不得再向下委派
 ```
 
 ## 使用示例

@@ -199,7 +199,7 @@
   name: '@dsh-collaboration/tool-team'
   config:
     providerName: spawn
-    maxDepth: 0
+    maxDepth: 1
 
 # 同题多模型对比：一个 prompt 并发发给多个模型，答案并排返回。
 # 未在官方「设置 → 模型」添加对应供应商时，该模型条目只产生 error，不影响其余模型。

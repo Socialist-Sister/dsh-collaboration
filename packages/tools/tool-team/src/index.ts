@@ -24,8 +24,12 @@ export const inject = ['tools', 'subagents', 'collaborationTeam']
 export const Config = z.object({
   /** Subagent provider the specialists run on (`spawn` = fresh children). */
   providerName: z.string().default('spawn'),
-  /** Absolute delegation-depth cap for specialist children. */
-  maxDepth: z.number().step(1).min(0).default(0),
+  /**
+   * Absolute delegation-depth cap for specialist children. Must be >= 1:
+   * the main agent's child runs at depth 1. `1` (default) means specialists
+   * may not delegate further.
+   */
+  maxDepth: z.number().step(1).min(1).default(1),
 })
 
 interface RawConfig {
@@ -93,7 +97,7 @@ function formatRosterIds(roster: AgentRef[]): string {
 
 export function apply(ctx: any, config: RawConfig) {
   const providerName = config.providerName ?? 'spawn'
-  const maxDepth = config.maxDepth ?? 0
+  const maxDepth = config.maxDepth ?? 1
 
   const roster = (): AgentRef[] => {
     const service = ctx.collaborationTeam
