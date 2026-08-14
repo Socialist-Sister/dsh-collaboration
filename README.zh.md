@@ -58,7 +58,7 @@ packages/
 config/
   agent-presets/collaboration/   开箱即用的代理预设（协同模式）
 docs/                            安装、配置与使用文档
-scripts/                         验证脚本（含 CI 防回归 Guard 配套）
+scripts/                         验证脚本
 ```
 
 ## 快速开始

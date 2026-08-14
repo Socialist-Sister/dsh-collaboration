@@ -3,7 +3,7 @@
 // The new commit is anchored on the REMOTE head (local history may have
 // diverged through earlier API pushes whose objects never reached this repo).
 import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 
 const repo = 'Socialist-Sister/dsh-collaboration'
 const base = `https://api.github.com/repos/${repo}`
@@ -40,9 +40,14 @@ console.log(`files to push: ${changed.length}`)
 
 const tree = []
 for (const file of changed) {
+  const path = file.replaceAll('\\', '/')
+  if (!existsSync(file)) {
+    tree.push({ path, mode: '100644', type: 'blob', sha: null })
+    continue
+  }
   const content = readFileSync(file)
   const blob = await api('POST', '/git/blobs', { content: content.toString('base64'), encoding: 'base64' })
-  tree.push({ path: file.replaceAll('\\', '/'), mode: '100644', type: 'blob', sha: blob.sha })
+  tree.push({ path, mode: '100644', type: 'blob', sha: blob.sha })
 }
 
 const treeResult = await api('POST', '/git/trees', { base_tree: remoteCommit.tree.sha, tree })
