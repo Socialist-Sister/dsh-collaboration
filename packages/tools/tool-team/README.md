@@ -4,13 +4,13 @@
 
 依赖宿主行 `@dsh-collaboration/team`（提供 `collaborationTeam` 名册 + 实例注册表服务）。
 
-## 工具（v0.2）
+## 工具（v0.3）
 
 | 工具 | 参数 | 行为 |
 |---|---|---|
-| `team_call` | `agent`（身份 id）、`task`、`context?`、`instances?`、`wait?` | **雇佣持久专家实例**（默认）：每个实例是长驻子代理，用自己的会话干活、用 `report` 汇报，结算时主代理收到通知；`instances` 可雇佣同一身份的多个**分身**（reviewer#1、reviewer#2…）并行处理不同任务；`wait: true` 退化为一次性阻塞调用（instances 必须为 1） |
-| `team_message` | `to`（实例 id）、`message` | 主代理 → 实例追问/转发（**星型拓扑**：专家之间不直接通话，经主代理转达） |
-| `team_status` | — | 实时团队面板：每个实例的 id / 身份 / working or settled |
+| `team_call` | `agent`（身份 id）、`task`、`context?`、`tasks?`、`instances?`、`wait?` | **雇佣持久专家实例**（默认）：每个实例是长驻子代理，用自己的会话干活、用 `report` 汇报，结算时主代理收到通知；`instances` 可雇佣同一身份的多个**分身**（reviewer#1、reviewer#2…）执行**同一份任务**；要让分身各干各的，请用 `tasks`（一次调用按任务数雇佣分身，每个分身拿到自己的任务，覆盖 `instances`，仅 `wait: false` 有效）；`wait: true` 退化为一次性阻塞调用（instances 必须为 1、不支持 tasks） |
+| `team_message` | `to`（实例 id）、`message` | 主代理 → 实例追问/转发（**星型拓扑**：专家之间不直接通话，经主代理转达）；已解散实例拒绝投递 |
+| `team_status` | — | 实时团队面板：每个实例的 id / 身份 / working / settled / dismissed |
 | `team_close` | `instance`（实例 id） | 打断并解散一个实例 |
 | `roundtable` | `topic`、`agents?`、`background?` | 一次性并行召集专家发言（默认全体，main 除外），主代理主持综合 |
 
@@ -37,6 +37,8 @@
     providerName: spawn
     maxDepth: 1        # 必须 >= 1：主代理的专家子代理深度为 1；1 = 专家不得再向下委派
 ```
+
+> 注：`config.providerName` 仅作用于 `wait: true` / `roundtable` 的一次性调用路径；`team_call` 的持久雇佣路径固定用 `spawn` 启动子代理。
 
 ## 使用示例
 

@@ -295,6 +295,28 @@ export function apply(ctx: any) {
   const counters = new Map<string, Map<string, number>>()
   // Instance ids dismissed through label recovery (not in the live registry).
   const dismissedRecovered = new Map<string, Set<string>>()
+  // R1: one shared counter-recovery promise per (parent, identity), cached
+  // forever. Without this, two concurrent cold-state first hires of the same
+  // identity both read an empty counter, both await listChildren and derive
+  // the same maxIndex — then collide on the same label (e.g. reviewer#3 twice).
+  const recoveryLocks = new Map<string, Promise<number>>()
+
+  /** Recover the highest persisted index for one identity from durable child labels. */
+  const recoverMaxIndex = async (sessionId: SessionId, identityId: string): Promise<number> => {
+    let maxIndex = 0
+    try {
+      const children = await ctx.subagents.listChildren(sessionId)
+      for (const child of children) {
+        const parsed = parseInstanceLabel(child.label ?? '')
+        if (parsed !== undefined && parsed.identityId === identityId) {
+          maxIndex = Math.max(maxIndex, parsed.index)
+        }
+      }
+    } catch {
+      /* persistence unavailable — registry-only counting */
+    }
+    return maxIndex
+  }
 
   const bucketOf = (parentId: string): Map<string, LiveRecord> => {
     let bucket = buckets.get(parentId)
@@ -323,7 +345,10 @@ export function apply(ctx: any) {
     return set
   }
 
-  // F3: the working set only contains live, non-dismissed instances.
+  // F3: the working set only contains LIVE, non-dismissed instances —
+  // `agents.get` is synchronous, so a settled child (gone from the agent
+  // registry) is filtered out too, keeping the "当前在线实例" prompt section
+  // honest and bounded instead of accumulating settled entries.
   const workingSet = (parentSessionId?: string): TeamInstance[] => {
     const records: LiveRecord[] = []
     if (parentSessionId === undefined) {
@@ -331,7 +356,7 @@ export function apply(ctx: any) {
     } else {
       records.push(...(buckets.get(parentSessionId)?.values() ?? []))
     }
-    return records.filter((record) => !record.dismissed)
+    return records.filter((record) => !record.dismissed && ctx.agents.get(record.childId) !== undefined)
   }
 
   const recordFromLabel = (label: string, childId: SessionId): TeamInstance | undefined => {
@@ -373,27 +398,33 @@ export function apply(ctx: any) {
     }
     const parentId = String(parent.session.id)
     const counter = counterOf(parentId)
-    let index = counter.get(identityId) ?? 0
-    if (index === 0) {
-      // F1: recover the counter from persisted child labels after a restart,
-      // so a re-hire never collides with an existing durable child's label.
-      let maxIndex = 0
-      try {
-        const children = await ctx.subagents.listChildren(parent.session.id)
-        for (const child of children) {
-          const parsed = parseInstanceLabel(child.label ?? '')
-          if (parsed !== undefined && parsed.identityId === identityId) {
-            maxIndex = Math.max(maxIndex, parsed.index)
-          }
-        }
-      } catch {
-        /* persistence unavailable — registry-only counting */
+    let index = counter.get(identityId)
+    if (index === undefined) {
+      // F1 + R1: recover the counter from persisted child labels after a
+      // restart — via ONE shared promise per (parent, identity), so parallel
+      // cold-state first hires of the same identity never race listChildren
+      // and derive the same maxIndex (which would collide on the same label).
+      const key = `${parentId}\u0000${identityId}`
+      let pending = recoveryLocks.get(key)
+      if (pending === undefined) {
+        pending = recoverMaxIndex(parent.session.id, identityId)
+        recoveryLocks.set(key, pending)
       }
-      index = maxIndex
+      const base = await pending
+      // Re-read the counter after the await: another concurrent caller may
+      // have already incremented past the recovered base.
+      const current = counter.get(identityId)
+      index = current !== undefined ? Math.max(current, base) : base
     }
     index += 1
+    // No await between the increment and the set: the counter is the
+    // collision gate for concurrent hires.
     counter.set(identityId, index)
     const instanceId = `${identityId}#${index}`
+    // Defensive: a stale dismissal mark for this exact id must not reject
+    // followups to the freshly hired instance (e.g. after a failed recovery
+    // re-issued an id that a label-recovered child previously owned).
+    dismissedOf(parentId).delete(instanceId)
     const label = `team:${instanceId}`
     const start = await ctx.subagents.startContinuable({
       provider: 'spawn',
@@ -444,7 +475,13 @@ export function apply(ctx: any) {
     const parentId = String(parent.session.id)
     const hit = buckets.get(parentId)?.get(instanceId)
     if (hit !== undefined) {
+      // Mark, then drop the record from the live bucket; the dismissal moves to
+      // dismissedRecovered so followup stays rejected and instances() keeps
+      // showing the instance as dismissed (via label recovery), while
+      // workingSet no longer includes it.
       hit.dismissed = true
+      buckets.get(parentId)?.delete(instanceId)
+      dismissedOf(parentId).add(instanceId)
     } else {
       dismissedOf(parentId).add(instanceId)
     }

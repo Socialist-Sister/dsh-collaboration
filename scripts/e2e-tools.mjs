@@ -152,6 +152,28 @@ console.log('== @dsh-collaboration/tool-team ==')
     assert(text.includes('planner') && text.includes('跟随主模型') && text.includes('team_message'), 'team section renders roster, follow-model state and console guidance')
   }
 
+  // P0 regression (v0.3.2, tool:198): workingSet is a service FUNCTION — it must be
+  // CALLED, not checked with Array.isArray — so a live working set actually renders.
+  {
+    const { ctx: liveCtx, captured: liveCap } = makeMockCtx()
+    applyTeam(liveCtx, presetConfig.team)
+    const liveCall = liveCap.tools.find((tool) => tool.name === 'team_call')
+    const liveExec = { agent: { session: { id: 'live-s1' } }, signal: new AbortController().signal }
+    await liveCall.execute({ agent: 'reviewer', task: '审查 X', instances: 2 }, liveExec)
+    const liveSection = liveCap.promptSections.find((s) => s.name === 'dsh-collaboration:team-roster')
+    const liveText = typeof liveSection?.text === 'function' ? liveSection.text({ agent: { session: { id: 'live-s1' } } }) : liveSection?.text
+    assert(typeof liveText === 'string' && liveText.includes('当前在线实例') && liveText.includes('reviewer#1') && liveText.includes('reviewer#2'), 'team section: non-empty working set renders 当前在线实例 with instance ids')
+  }
+
+  // workingSet returning an empty array must omit the online-instances block.
+  {
+    const { ctx: emptyCtx, captured: emptyCap } = makeMockCtx()
+    applyTeam(emptyCtx, presetConfig.team)
+    const emptySection = emptyCap.promptSections.find((s) => s.name === 'dsh-collaboration:team-roster')
+    const emptyText = typeof emptySection?.text === 'function' ? emptySection.text({ agent: { session: { id: 's1' } } }) : emptySection?.text
+    assert(typeof emptyText === 'string' && !emptyText.includes('当前在线实例'), 'team section: empty working set omits 当前在线实例 block')
+  }
+
   const teamCall = captured.tools.find((tool) => tool.name === 'team_call')
   const noAgentExec = { signal: new AbortController().signal }
   const agentExec = { agent: { session: { id: 's1' } }, signal: new AbortController().signal }

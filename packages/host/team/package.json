@@ -1,6 +1,6 @@
 {
   "name": "@dsh-collaboration/team",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Named specialist roster AND live team registry for DeepSeek Harness: user-configurable agent identities plus persistent specialist instances (continuable subagents) with follow-up, status and dismissal.",
   "license": "MIT",
   "type": "module",

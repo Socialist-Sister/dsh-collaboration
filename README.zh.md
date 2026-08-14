@@ -26,7 +26,7 @@
 | 能力 | 包 | 说明 |
 |---|---|---|
 | 🧑‍🤝‍🧑 专家名册 | `@dsh-collaboration/team` | 预设十身份（主代理/规划师/工程师/调试员/审查员/研究员/评论家/写手/观察员/画家），各司其职；每个身份的模型在 `settings.yaml` 自行配置，**改完即生效**；留空 = 跟随主模型。v0.2 起身份即模板，可雇佣为**持久专家实例**（可多分身） |
-| 🎯 团队控制台 | `@dsh-collaboration/tool-team` | `team_call` 雇佣持久专家实例（`instances` 分身）；`team_message` 追问/转发（星型拓扑）；`team_status` 团队面板；`team_close` 解散；`roundtable` 一次性并行圆桌 |
+| 🎯 团队控制台 | `@dsh-collaboration/tool-team` | `team_call` 雇佣持久专家实例（`instances` 分身、`tasks` 按任务给每个分身分派不同工作）；`team_message` 追问/转发（星型拓扑）；`team_status` 团队面板；`team_close` 解散；`roundtable` 一次性并行圆桌 |
 | ⚖️ 模型对比 | `@dsh-collaboration/tool-model-compare` | 同一 prompt 并发发送多个模型，答案并排返回 |
 | 👁️ 多模态桥 | `@dsh-collaboration/tool-vision` | 纯文本主代理把图片/截图交给视觉模型，拿回文字分析 |
 | 🎁 一键预设 | `config/agent-presets/collaboration` | standard 全量工具 + 上述工具（显示名：**协同模式**） |

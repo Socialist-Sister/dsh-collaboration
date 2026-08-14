@@ -76,10 +76,11 @@ const TEAM_CALL_DESCRIPTION =
 const TEAM_MESSAGE_DESCRIPTION =
   'Send one message from you (the main agent) to a hired specialist instance, e.g. "reviewer#1". The instance ' +
   'wakes up and answers with its report tool. This is the STAR relay: specialists do not message each other ' +
-  'directly — if one specialist needs another, YOU forward the message with this tool.'
+  'directly — if one specialist needs another, YOU forward the message with this tool. ' +
+  'Dismissed instances refuse delivery.'
 
 const TEAM_STATUS_DESCRIPTION =
-  'Show the live team board: every hired specialist instance (id, identity, status working/settled). ' +
+  'Show the live team board: every hired specialist instance (id, identity, status working/settled/dismissed). ' +
   'Use it before messaging or closing an instance, or when you are unsure who is still around.'
 
 const TEAM_CLOSE_DESCRIPTION =
@@ -195,7 +196,11 @@ export function apply(ctx: any, config: RawConfig) {
       order: 150,
       text: (context: any) => {
         const parentId = context?.agent?.session?.id
-        const working = Array.isArray(ctx.collaborationTeam.workingSet) ? ctx.collaborationTeam.workingSet(parentId) : []
+        // workingSet is a service FUNCTION (not an array): call it first, then
+        // guard the result. Also stay compatible with a missing collaborationTeam service.
+        const workingSet = ctx.collaborationTeam?.workingSet
+        const snapshot = typeof workingSet === 'function' ? workingSet(parentId) : undefined
+        const working = Array.isArray(snapshot) ? snapshot : []
         return renderTeam(roster(), working)
       },
     })
@@ -325,9 +330,9 @@ export function apply(ctx: any, config: RawConfig) {
             delivered: { type: 'boolean', required: true },
           },
         },
-        render: (_args, value: any) => [
-          { type: 'text', text: value.delivered ? `已发送给 ${value.instanceId}。` : `发送给 ${value.instanceId} 失败。` },
-        ],
+        // execute throws on failure, so `delivered` is always true here — the
+        // failure branch was unreachable dead code and has been removed.
+        render: (_args, value: any) => [{ type: 'text', text: `已发送给 ${value.instanceId}。` }],
       },
       timeoutMs: 60000,
       isConcurrencySafe: () => true,

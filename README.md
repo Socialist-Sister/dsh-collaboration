@@ -44,7 +44,7 @@ Inspired by the multi-agent workbench idea of [oh-my-openagent](https://github.c
 | Feature | Package | Notes |
 |---|---|---|
 | 🧑‍🤝‍🧑 Specialist roster | `@dsh-collaboration/team` | Ten pre-defined identities (main/planner/coder/debugger/reviewer/researcher/critic/writer/looker/painter), each with a duty; per-identity models configured in `settings.yaml`, applied **live**; empty = follow the session model. Since v0.2 identities are templates that can be hired as PERSISTENT specialist instances (with clones) |
-| 🎯 Team console | `@dsh-collaboration/tool-team` | `team_call` hires persistent specialists (`instances` clones one identity); `team_message` follow-ups/relays (star topology); `team_status` live board; `team_close` dismisses; `roundtable` one-shot parallel panel |
+| 🎯 Team console | `@dsh-collaboration/tool-team` | `team_call` hires persistent specialists (`instances` clones one identity, `tasks` gives each clone its own task); `team_message` follow-ups/relays (star topology); `team_status` live board; `team_close` dismisses; `roundtable` one-shot parallel panel |
 | ⚖️ Model comparison | `@dsh-collaboration/tool-model-compare` | One prompt to several models in parallel, answers side by side |
 | 👁️ Vision bridge | `@dsh-collaboration/tool-vision` | A text-only main agent sends images to a vision-capable model and works from the text analysis |
 | 🎁 One-line preset | `config/agent-presets/collaboration` | Full `standard` toolset + the tools above (display name: 协同模式 / Collaboration Mode) |

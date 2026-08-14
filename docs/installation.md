@@ -39,7 +39,7 @@ profile workspace 使用 `nodeLinker: hoisted`，包与其依赖会被提升到 
 
 **不要禁用内置 `llm-pi-ai`**——官方「添加供应商」功能就是它提供的。本套件不注册任何模型路由，与官方目录天然无冲突。
 
-> **已有 patch 内容怎么办**：`cordis.patch.yml` 是 YAML 数组，把上面的 `- insert:` 条目**追加进现有数组**即可（与已有条目并列，注意数组项以 `- ` 开头、与已有条目同级缩进）。用 `dsh --profile <名> --dump-config` 可随时验证合并结果。
+> **已有 patch 内容怎么办**：`cordis.patch.yml` 是 YAML 数组，把上面的 `- insert:` 条目**追加进现有数组**即可（与已有条目并列，注意数组项以 `- ` 开头、与已有条目同级缩进）。若该文件尚不存在，直接新建即可——内容为顶层 YAML 数组（例如 `[]`，或直接放上面的 insert 条目）。用 `dsh --profile <名> --dump-config` 可随时验证合并结果。
 
 ## 3. 添加模型供应商（官方界面）
 
@@ -93,7 +93,7 @@ Copy-Item -Recurse <repo>\config\agent-presets\collaboration "$env:USERPROFILE\.
 2. 新建会话选择「协同模式」预设，工具列表里出现 `team_call` / `team_message` / `team_status` / `team_close` / `roundtable` / `model_compare` / `vision`；
 3. 若某身份/工具引用了未添加的路由，调用时对应条目只报错，不影响其他条目。
 
-> 状态时窗说明：`team_status` 的 `working/settled` 基于子代理是否仍驻留，专家刚汇报完、结算通知送达前可能短暂显示 `working`，属正常时窗；`dismissed` 由本套件标记，即时准确。
+> 状态时窗说明：`team_status` 的 `working/settled` 基于子代理是否仍驻留，专家刚汇报完、结算通知送达前可能短暂显示 `working`，属正常时窗；`dismissed` 由本套件标记，即时准确。注意解散标记是**进程内存态**：DSH 重启后，已解散的实例会经 label 恢复为普通实例，需要时需重新解散。
 
 ## 7. 使用示例
 

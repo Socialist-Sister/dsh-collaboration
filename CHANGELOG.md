@@ -2,6 +2,18 @@
 
 本文件记录 dsh-collaboration 各版本的变更（遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 精神）。
 
+## [v0.3.2] - Unreleased
+
+### 修复与改进
+
+- **tool:198 系统提示回归修复**：`systemPrompt` 段的 `workingSet` 检查误把函数引用当数组（`Array.isArray(函数)` 恒为 false），导致「当前在线实例」段永远为空——改为先调用再判断，并保持 `collaborationTeam` 服务缺失（undefined）时的兼容。
+- **`team_message` 死代码渲染清理**：render 中的失败分支不可达（execute 失败一律 throw，`delivered` 恒为 true），已简化为直接输出「已发送给 …」；output schema 保持不变。
+- **工具描述补充**：`team_status` 描述补 `dismissed` 状态；`team_message` 描述注明已解散实例拒绝投递。
+- **文档 N1-N5**：team_call 参数表补 `tasks`、修正 `instances` 语义表述（同一份任务的分身，不同任务用 `tasks`）、章节标题 v0.2→v0.3、team_status 补 dismissed、team_message 补拒绝投递说明；另补 `config.providerName` 仅作用于一次性路径、安装文档的 cordis.patch.yml 新建方式与解散标记重启语义。
+- **高危：冷态并发首雇竞态（host:team）**：spawn 的计数恢复是 read-modify-write——两个并发首次雇佣同一身份都会读到空计数器、各自 await listChildren 后得到相同 maxIndex，从而撞出相同 label（如两个 `reviewer#3`）。新增进程级 `recoveryLocks`：按 `${parentId}\u0000${identityId}` 共享同一次恢复 promise（listChildren 异常时回退 0、永久缓存不删除），await 后重读计数器取 max 再 +1，递增与 set 之间无 await，杜绝撞名。
+- **高危：registry 清理/误标（host:team）**：`workingSet` 只返回真正存活的实例（`!dismissed && agents.get(childId) !== undefined`，`agents.get` 同步），「当前在线实例」不再把 settled 实例误标为 working、也不再无限膨胀；`close` 后 dismissed 记录从 bucket 摘除、解散标记转存 `dismissedRecovered`（followup 仍被拒、instances() 经 label 恢复显示 dismissed、工作集不再包含）；`spawn` 认领新 id 后清除该 id 的陈旧解散标记（防御性）。
+- **测试**：新增 `scripts/e2e-team-host.mjs`（mock ctx 宿主逻辑测试，风格同 e2e-tools.mjs）——覆盖并发冷态 spawn 不撞名（共享恢复 promise、listChildren 只调用一次）、workingSet 存活过滤（live/settled/dismissed 三种）、close 摘除（工作集剔除、followup 拒绝、instances() 经 label 恢复显示 dismissed、重新雇佣不撞名）。
+
 ## [v0.3.1] - 2026-08-14
 
 ### 修复与改进（协同模式会话实测总结的处置）
