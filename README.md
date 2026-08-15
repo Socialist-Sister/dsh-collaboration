@@ -117,7 +117,7 @@ Ten pre-defined identities, each with its own specialty. The tool surface is tie
 
 | id | Name | Specialty | Tool surface |
 |---|---|---|---|
-| `main` | 主代理 (Main agent) | Coordinates the whole effort: breaks down the goal, dispatches specialists, and makes the final call — prefers delegating over doing | Full session toolset (never hired as an instance) |
+| `main` | 主代理 (Main agent) | Coordinates the whole effort: first analyzes the task structure and clarifies the division of labor, then dispatches via `team_call`; integrates specialist reports and makes the final call — never executes specialists' core work itself | Full session toolset (never hired as an instance) |
 | `planner` | 规划师 (Planner) | Splits complex goals into steps and milestones with dependencies, ordering, and acceptance criteria | Read-only: read/glob/grep/web_search |
 | `coder` | 工程师 (Engineer) | Writes production code, lands features, fixes defects; follows the project's existing style and conventions | Execution: pwsh/read/write/edit/glob/grep/web_search/skill/todo_write |
 | `debugger` | 调试员 (Debugger) | Hunts bugs: reads errors and logs, produces minimal reproductions and fix plans | Execution: pwsh/read/glob/grep/edit |

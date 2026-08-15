@@ -153,8 +153,8 @@ console.log('== @dsh-collaboration/tool-team ==')
     assert(section.name !== undefined && section.order === 150, 'team section at order 150')
     const text = typeof section.text === 'function' ? section.text({}) : section.text
     assert(text.includes('planner') && text.includes('跟随主模型') && text.includes('team_message'), 'team section renders roster, follow-model state and console guidance')
-    assert(!text.includes('统筹全局') && !text.includes('代码审查'), 'lean roster omits full role text (compact per-identity lines)')
-    assert(text.includes('分配任务'), 'roster guidance emphasizes dispatch-first main agent')
+    assert(text.includes('统筹全局') && !text.includes('代码审查'), 'lean roster keeps the main agent role (it is the session) but omits other identities role text')
+    assert(text.includes('明确分工') && text.includes('team_call'), 'roster guidance: analyze structure, clarify division of labor, then dispatch')
   }
 
   // P0 regression (v0.3.2, tool:198): workingSet is a service FUNCTION — it must be

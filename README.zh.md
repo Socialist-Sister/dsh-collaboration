@@ -99,7 +99,7 @@ researcher#1 ── team_help ──►  主代理收到 [team-relay]
 
 | id | 名称 | 擅长领域 | 工具面 |
 |---|---|---|---|
-| `main` | 主代理 | 统筹全局：拆解目标、调度专家、拍板决策 —— 倾向于分配任务而非亲自动手 | 全量会话工具（不单独雇佣） |
+| `main` | 主代理 | 统筹全局：先分析任务结构、明确分工，再用 `team_call` 派活给专家；汇总报告、拍板决策 —— 不亲自动手执行专家的本职工作 | 全量会话工具（不单独雇佣） |
 | `planner` | 规划师 | 把复杂目标拆成可执行的步骤与里程碑，理清依赖、顺序与验收标准 | 只读：read/glob/grep/web_search |
 | `coder` | 工程师 | 写实现代码、落地功能、修缺陷，遵循项目现有风格与约定 | 执行：pwsh/read/write/edit/glob/grep/web_search/skill/todo_write |
 | `debugger` | 调试员 | 定位 bug：分析报错与日志，给出最小复现与修复方案 | 执行：pwsh/read/glob/grep/edit |

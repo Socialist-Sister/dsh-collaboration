@@ -102,12 +102,12 @@ function renderTeam(roster: AgentRef[], working: InstanceRef[], mode: 'full' | '
   if (mode === 'off') return ''
   const lines: string[] = [
     '## 专家团队（dsh-collaboration）',
-    '你是团队主代理，**更倾向于分配任务而非亲自动手**：把思考、审查、调研、写作交给专家，你负责拆解、调度与综合决策。' +
-      'hire 专家用 `team_call`（`instances` 可雇佣多个分身）；跟进/追问用 `team_message`；' +
-      '查看谁在线用 `team_status`；解雇用 `team_close`。专家完成任务会用 report 汇报，结算时你会收到通知。' +
-      '专家之间不直接通话——需要转达就用 `team_message` 以你的名义转发。' +
-      '专家可通过 team_help 向你求助另一位专家：收到 `[team-relay]` 求助后，立即用 `team_message` 把任务转给目标专家，' +
-      '待其 report 后，再用 `team_message` 把回复转回求助方（标清“来自 X 的回复”）。',
+    '你是团队主协调者：接到任务先做简短的结构分析（目标 → 拆成哪几块 → 每块派给哪位专家），' +
+      '明确分工后立即用 `team_call` 派活——分析是为了分工，不是自己动手。' +
+      '你只调度与综合决策：研究、编码、审查、看图等专家的本职工作你不执行，一句话级别的琐事才亲自处理。' +
+      '操作：`team_call` 雇佣（`instances` 可多分身并行）；`team_message` 追问/转发；`team_status` 看状态；`team_close` 解散。' +
+      '专家用 report 汇报，结算时你会收到通知。专家间不直接通话——用 `team_message` 以你的名义转发。' +
+      '收到 `[team-relay]` 求助立即转发给目标专家，待其 report 后把回复转回求助方。',
     '',
     '名册（模板）：',
   ]
@@ -118,7 +118,8 @@ function renderTeam(roster: AgentRef[], working: InstanceRef[], mode: 'full' | '
         : agent.id === 'main'
           ? '（本会话主模型）'
           : '（跟随主模型）'
-    lines.push(mode === 'full' ? `- ${agent.id} — ${agent.name}${model}：${agent.role}` : `- ${agent.id} — ${agent.name}${model}`)
+    // lean 模式下其他身份一行式，但 main 是会话本身——它的协调者人设必须完整出现。
+    lines.push(mode === 'full' || agent.id === 'main' ? `- ${agent.id} — ${agent.name}${model}：${agent.role}` : `- ${agent.id} — ${agent.name}${model}`)
   }
   if (working.length > 0) {
     lines.push('', '当前在线实例：')

@@ -2,6 +2,15 @@
 
 本文件记录 dsh-collaboration 各版本的变更（遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 精神）。
 
+## [v0.4.1] - Unreleased
+
+### 行为调教：协调者人设与派活流程（实测反馈）
+
+- **预设 persona 重写为中文协调者**：协作预设不再沿用官方 standard 的英文 "You are a coding agent…" 人设（实测导致主代理自己动手 + 输出英文）。新 persona：先简短分析任务结构、明确分工，再立即 `team_call` 派活；只调度与综合决策，不执行专家的本职工作；回复语言跟随用户消息。同步更新仓库预设与 `~/.dsh/.agent-presets/` 用户副本。
+- **名册提示段升级（tool-team）**：主代理指引改为「目标 → 拆块 → 分工 → 派活」流程，明确「分析是为了分工，不是自己动手」「一句话级别的琐事才亲自处理」；lean 模式下 main 身份的完整协调者人设不再折叠（其他身份仍一行式）。
+- **默认名册 main 身份（host:team）**：role 改为与 persona 一致的协调者文案；用户 `settings.yaml` 的 main role 已同步。
+- **测试**：e2e-tools 断言更新——lean 模式保留 main 完整人设、其他身份省略；指引段校验「明确分工 + team_call」。
+
 ## [v0.4.0] - Unreleased
 
 ### 新增：专家互聊（求助转发通道）
