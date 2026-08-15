@@ -36,11 +36,19 @@ export const Config = z.object({
    * may not delegate further.
    */
   maxDepth: z.number().step(1).min(1).default(1),
+  /**
+   * Roster prompt verbosity. `lean` (default) = one compact line per
+   * identity; `full` = identity + duty text; `off` = no roster section
+   * (tool descriptions carry the essentials). Lower verbosity = better
+   * model performance on long sessions.
+   */
+  rosterPrompt: z.union(['full', 'lean', 'off']).default('lean'),
 })
 
 interface RawConfig {
   providerName?: string
   maxDepth?: number
+  rosterPrompt?: 'full' | 'lean' | 'off'
 }
 
 interface AgentRef {
@@ -51,6 +59,7 @@ interface AgentRef {
   provider?: string
   model?: string
   maxTokens?: number
+  toolFilter?: { allow?: string[]; deny?: string[] }
 }
 
 interface InstanceRef {
@@ -64,42 +73,33 @@ interface InstanceRef {
 }
 
 const TEAM_CALL_DESCRIPTION =
-  'Hire one or more PERSISTENT specialists from the team roster. Each hired instance becomes a long-lived ' +
-  'background teammate with its own session: it works on its task, reports its conclusion via `report`, and ' +
-  'you get a settlement notice when it finishes. Use `team_message` to follow up, ask it to revise, or give it ' +
-  'more work; use `team_status` for the live board; use `team_close` to dismiss one. Set `instances` > 1 to hire ' +
-  'several clones of the SAME identity for different tasks (they get ids like reviewer#1, reviewer#2). ' +
-  'A specialist without a pinned model follows the session model, a pinned one runs on its own provider/model. ' +
-  'For a quick one-off answer with no follow-up, pass `wait: true` — the call then blocks and returns the ' +
-  'specialist\'s answer directly (instances must be 1).'
+  'Hire persistent specialists from the team roster as background teammates (each has its own session and reports via `report`; you get a settlement notice when one finishes). ' +
+  '`tasks` hires one clone per entry with distinct work; `instances` clones the same task; `wait: true` = one-shot blocking call returning the answer directly (no instance). ' +
+  'Manage hired instances with `team_message` (follow-up/relay), `team_status` (board), `team_close` (dismiss). A specialist without a pinned model follows the session model.'
 
 const TEAM_MESSAGE_DESCRIPTION =
-  'Send one message from you (the main agent) to a hired specialist instance, e.g. "reviewer#1". The instance ' +
-  'wakes up and answers with its report tool. This is the STAR relay: specialists do not message each other ' +
-  'directly — if one specialist needs another, YOU forward the message with this tool. ' +
-  'Dismissed instances refuse delivery.'
+  'Send one message to a hired specialist instance (e.g. reviewer#1); it wakes and answers via `report`. ' +
+  'Star topology: specialists do not message each other directly — relay through you. Dismissed instances refuse delivery.'
 
 const TEAM_STATUS_DESCRIPTION =
-  'Show the live team board: every hired specialist instance (id, identity, status working/settled/dismissed). ' +
-  'Use it before messaging or closing an instance, or when you are unsure who is still around.'
+  'Show the live team board: every hired instance (id, identity, status working/settled/dismissed). Check it before messaging or closing instances.'
 
 const TEAM_CLOSE_DESCRIPTION =
-  'Dismiss one hired specialist instance by its instance id (e.g. reviewer#1). Its current turn is interrupted, ' +
-  'it refuses further team_message deliveries, and team_status marks it as dismissed. Unknown ids fail loudly.'
+  'Dismiss one hired instance by id (e.g. reviewer#1): its turn stops, team_message deliveries are refused, and team_status marks it dismissed. Unknown ids fail loudly.'
 
 const ROUNDTABLE_DESCRIPTION =
-  'Convene several specialists from the team roster IN PARALLEL on one topic and collect their statements. ' +
-  'You are the chair: after this tool returns, synthesize the statements into one verdict in your own answer. ' +
-  'Omit `agents` to convene every specialist. One failing specialist does not fail the round.'
+  'Convene roster specialists IN PARALLEL on one topic and collect their statements; synthesize the verdict yourself. Omit `agents` for every specialist; one failure does not fail the round.'
 
 function formatRosterIds(roster: AgentRef[]): string {
   return roster.map((agent) => agent.id).join(', ')
 }
 
-function renderTeam(roster: AgentRef[], working: InstanceRef[]): string {
+function renderTeam(roster: AgentRef[], working: InstanceRef[], mode: 'full' | 'lean' | 'off'): string {
+  if (mode === 'off') return ''
   const lines: string[] = [
     '## 专家团队（dsh-collaboration）',
-    '你是团队主代理。hire 专家用 `team_call`（`instances` 可雇佣多个分身）；跟进/追问用 `team_message`；' +
+    '你是团队主代理，**更倾向于分配任务而非亲自动手**：把思考、审查、调研、写作交给专家，你负责拆解、调度与综合决策。' +
+      'hire 专家用 `team_call`（`instances` 可雇佣多个分身）；跟进/追问用 `team_message`；' +
       '查看谁在线用 `team_status`；解雇用 `team_close`。专家完成任务会用 report 汇报，结算时你会收到通知。' +
       '专家之间不直接通话——需要转达就用 `team_message` 以你的名义转发。',
     '',
@@ -111,8 +111,8 @@ function renderTeam(roster: AgentRef[], working: InstanceRef[]): string {
         ? `（${agent.provider}/${agent.model}）`
         : agent.id === 'main'
           ? '（本会话主模型）'
-          : '（跟随主模型；可在 settings.yaml 的 collaboration-team 段单独指定）'
-    lines.push(`- ${agent.id} — ${agent.name}${model}：${agent.role}`)
+          : '（跟随主模型）'
+    lines.push(mode === 'full' ? `- ${agent.id} — ${agent.name}${model}：${agent.role}` : `- ${agent.id} — ${agent.name}${model}`)
   }
   if (working.length > 0) {
     lines.push('', '当前在线实例：')
@@ -126,6 +126,7 @@ function renderTeam(roster: AgentRef[], working: InstanceRef[]): string {
 export function apply(ctx: any, config: RawConfig) {
   const providerName = config.providerName ?? 'spawn'
   const maxDepth = config.maxDepth ?? 1
+  const rosterPrompt = config.rosterPrompt ?? 'lean'
 
   const roster = (): AgentRef[] => {
     const service = ctx.collaborationTeam
@@ -168,6 +169,7 @@ export function apply(ctx: any, config: RawConfig) {
               },
             }
           : {}),
+        ...(agent.toolFilter !== undefined ? { toolFilter: agent.toolFilter } : {}),
         maxDepth,
       })
     } catch (error) {
@@ -201,7 +203,7 @@ export function apply(ctx: any, config: RawConfig) {
         const workingSet = ctx.collaborationTeam?.workingSet
         const snapshot = typeof workingSet === 'function' ? workingSet(parentId) : undefined
         const working = Array.isArray(snapshot) ? snapshot : []
-        return renderTeam(roster(), working)
+        return renderTeam(roster(), working, rosterPrompt)
       },
     })
   }

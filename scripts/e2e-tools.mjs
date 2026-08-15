@@ -21,7 +21,7 @@ function assert(condition, label) {
 const ROSTER = [
   { id: 'main', name: '主代理', role: '统筹全局' },
   { id: 'planner', name: '规划师', role: '拆解任务', provider: 'deepseek-official', model: 'deepseek-v4-flash' },
-  { id: 'reviewer', name: '审查员', role: '代码审查', provider: 'deepseek-official', model: 'deepseek-v4-flash' },
+  { id: 'reviewer', name: '审查员', role: '代码审查', provider: 'deepseek-official', model: 'deepseek-v4-flash', toolFilter: { allow: ['read', 'grep'] } },
   { id: 'looker', name: '观察员', role: '看图' },
 ]
 
@@ -64,10 +64,13 @@ function makeMockCtx() {
       workingSet: () => captured.hired.filter((entry) => !captured.dismissed.has(entry.instanceId)),
     },
     subagents: {
-      start: async () => ({
-        result: Promise.resolve({ output: [{ type: 'text', text: 'ONESHOT' }], stopReason: 'completed' }),
-        dispose: async () => {},
-      }),
+      start: async (_name, request) => {
+        captured.lastStart = request
+        return {
+          result: Promise.resolve({ output: [{ type: 'text', text: 'ONESHOT' }], stopReason: 'completed' }),
+          dispose: async () => {},
+        }
+      },
     },
     tools: {
       register(definition) {
@@ -150,6 +153,8 @@ console.log('== @dsh-collaboration/tool-team ==')
     assert(section.name !== undefined && section.order === 150, 'team section at order 150')
     const text = typeof section.text === 'function' ? section.text({}) : section.text
     assert(text.includes('planner') && text.includes('跟随主模型') && text.includes('team_message'), 'team section renders roster, follow-model state and console guidance')
+    assert(!text.includes('统筹全局') && !text.includes('代码审查'), 'lean roster omits full role text (compact per-identity lines)')
+    assert(text.includes('分配任务'), 'roster guidance emphasizes dispatch-first main agent')
   }
 
   // P0 regression (v0.3.2, tool:198): workingSet is a service FUNCTION — it must be
@@ -203,6 +208,7 @@ console.log('== @dsh-collaboration/tool-team ==')
   // F5: wait mode returns a one-shot marker (empty instances + answer), never an addressable instance id.
   const oneShot = await teamCall.execute({ agent: 'reviewer', task: 'x', wait: true }, agentExec)
   assert(oneShot.instances.length === 0 && oneShot.answer === 'ONESHOT', 'team_call: wait mode returns one-shot marker, not a persistent instance id')
+  assert(captured.lastStart?.toolFilter !== undefined && captured.lastStart.toolFilter.allow.includes('read'), 'team_call: roster toolFilter passed to one-shot spawn')
 
   const teamMessage = captured.tools.find((tool) => tool.name === 'team_message')
   const msgNoAgent = await teamMessage.execute({ to: 'reviewer#1', message: 'hi' }, noAgentExec).catch((e) => e)

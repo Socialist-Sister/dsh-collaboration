@@ -14,6 +14,13 @@
 - **高危：registry 清理/误标（host:team）**：`workingSet` 只返回真正存活的实例（`!dismissed && agents.get(childId) !== undefined`，`agents.get` 同步），「当前在线实例」不再把 settled 实例误标为 working、也不再无限膨胀；`close` 后 dismissed 记录从 bucket 摘除、解散标记转存 `dismissedRecovered`（followup 仍被拒、instances() 经 label 恢复显示 dismissed、工作集不再包含）；`spawn` 认领新 id 后清除该 id 的陈旧解散标记（防御性）。
 - **测试**：新增 `scripts/e2e-team-host.mjs`（mock ctx 宿主逻辑测试，风格同 e2e-tools.mjs）——覆盖并发冷态 spawn 不撞名（共享恢复 promise、listChildren 只调用一次）、workingSet 存活过滤（live/settled/dismissed 三种）、close 摘除（工作集剔除、followup 拒绝、instances() 经 label 恢复显示 dismissed、重新雇佣不撞名）。
 
+### 精简与分级工具面（接近极简模式表现，功能不减）
+
+- **按身份分级工具面（toolFilter）**：名册身份新增 `toolFilter: { allow: [...] }`——研究/分析型（planner/reviewer/researcher/critic）只给 `read/glob/grep/web_search`；执行型（coder 给 `pwsh/read/write/edit/glob/grep/web_search/skill/todo_write`，debugger 给 `pwsh/read/glob/grep/edit`，writer 给 `read/write/edit/glob/grep`）；视觉型（looker/painter）给 `read/read_image/vision`。spawn 与一次性 wait/roundtable 路径均透传；白名单外的工具从专家提示与执行层同时消失（平台原生 `tools.restrict` 语义，未知名大声失败）。
+- **名册提示段分级（rosterPrompt）**：`full`（身份+职责全文）/ `lean`（默认，一行式 `id — 名称（模型）`，不再每次组装注入全部人设）/ `off`（零注入，工具描述自带要点）。越低越接近极简预设的模型表现。
+- **主代理「分配优先」引导**：主代理角色与名册段文案改为「更倾向于分配任务而非亲自动手——思考/审查/调研/写作交给专家」。
+- **团队工具描述瘦身**：五个工具的描述压缩约 2/3，每次请求的 schema token 成本显著下降。
+
 ## [v0.3.1] - 2026-08-14
 
 ### 修复与改进（协同模式会话实测总结的处置）
