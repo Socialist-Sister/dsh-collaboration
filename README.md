@@ -30,7 +30,25 @@ A user-configured roster of specialists with on-demand dispatch — models come 
 [![Release](https://img.shields.io/github/v/release/Socialist-Sister/dsh-collaboration)](https://github.com/Socialist-Sister/dsh-collaboration/releases)
 [![CI](https://img.shields.io/github/actions/workflow/status/Socialist-Sister/dsh-collaboration/ci.yml?branch=main)](https://github.com/Socialist-Sister/dsh-collaboration/actions)
 
+<kbd>team</kbd> <kbd>tool-team</kbd> <kbd>tool-model-compare</kbd> <kbd>tool-vision</kbd>
+
 </div>
+
+---
+
+## Contents
+
+- [What is this](#what-is-this)
+- [Features](#features)
+- [How it works](#how-it-works)
+- [Team topology](#team-topology)
+- [The specialist roster](#the-specialist-roster)
+- [Repository layout](#repository-layout)
+- [Quick start](#quick-start)
+- [Roster configuration](#roster-configuration)
+- [Usage examples](#usage-examples)
+- [Development](#development)
+- [License](#license)
 
 ## What is this
 
@@ -66,24 +84,49 @@ Main agent (Collaboration preset)
   └─ vision        → images to a vision model → text analysis back
 ```
 
+## Team topology
+
+Every identity can be hired multiple times as separate instances (`reviewer#1`, `reviewer#2`, …). The main agent is the star hub — all traffic flows through it.
+
+```
+                     ┌─────────────────────┐
+                     │   Main agent (you)  │
+                     │     the star hub    │
+                     └──────────┬──────────┘
+        team_call hires  ·  team_message relays (both directions)
+     ┌──────────────┬────────────┼────────────┬──────────────┐
+     ▼              ▼            ▼            ▼              ▼
+ planner#1      coder#1      looker#1      writer#1      reviewer#2   …
+     │              │            │            │              │
+     └───────────── report / settlement notices ────────────┘
+```
+
+Specialists never talk to each other directly. When one needs another — for example `researcher` asking `looker` to read an image — the request circles through the main agent:
+
+```
+researcher#1 ── team_help ──►  main agent receives [team-relay]
+      ▲                             │
+      │                             ▼  team_message → looker#1
+      │                             │
+      └──── team_message ◄────  looker#1 reports the answer
+```
+
 ## The specialist roster
 
-The default roster ships ten identities, each with its own specialty. The tool surface is tiered by duty: research-type identities (planner/reviewer/researcher/critic) get read-only tools; execution identities (coder/debugger/writer) get shell/file/skill tools; visual identities (looker/painter) get read + vision. Every identity can be hired multiple times as separate instances (`reviewer#1`, `reviewer#2`, …).
+Ten pre-defined identities, each with its own specialty. The tool surface is tiered by duty: research-type identities get read-only tools, execution identities get shell/file/skill tools, visual identities get read + vision.
 
-| id | Name | Specialty |
-|---|---|---|
-| `main` | 主代理 (Main agent) | Coordinates the whole effort: breaks down the goal, dispatches specialists, and makes the final call — prefers delegating over doing |
-| `planner` | 规划师 (Planner) | Splits complex goals into steps and milestones with dependencies, ordering, and acceptance criteria |
-| `coder` | 工程师 (Engineer) | Writes production code, lands features, fixes defects; follows the project's existing style and conventions |
-| `debugger` | 调试员 (Debugger) | Hunts bugs: reads errors and logs, produces minimal reproductions and fix plans |
-| `reviewer` | 审查员 (Reviewer) | Reviews code and designs for security holes, edge cases, performance, and maintainability risks |
-| `researcher` | 研究员 (Researcher) | Researches technology, competitors, and facts; cites sources in its conclusions |
-| `critic` | 评论家 (Critic) | Challenges assumptions, hunts blind spots, plays devil's advocate — hardens the plan before it ships |
-| `writer` | 写手 (Writer) | Writes docs, reports, READMEs, and copy — precise language, clear structure |
-| `looker` | 观察员 (Looker) | Multimodal analysis of images, screenshots, and UIs: describes layouts, extracts text, spots visual issues |
-| `painter` | 画家 (Painter) | Image creation and generation: turns a description into visual assets or concepts |
-
-Specialists talk to each other **through the main agent**: a specialist that needs another specialist's help (for example, `researcher` asking `looker` to read an image) calls `team_help`; the main agent receives the `[team-relay]` request, forwards it with `team_message`, and relays the answer back.
+| id | Name | Specialty | Tool surface |
+|---|---|---|---|
+| `main` | 主代理 (Main agent) | Coordinates the whole effort: breaks down the goal, dispatches specialists, and makes the final call — prefers delegating over doing | Full session toolset (never hired as an instance) |
+| `planner` | 规划师 (Planner) | Splits complex goals into steps and milestones with dependencies, ordering, and acceptance criteria | Read-only: read/glob/grep/web_search |
+| `coder` | 工程师 (Engineer) | Writes production code, lands features, fixes defects; follows the project's existing style and conventions | Execution: pwsh/read/write/edit/glob/grep/web_search/skill/todo_write |
+| `debugger` | 调试员 (Debugger) | Hunts bugs: reads errors and logs, produces minimal reproductions and fix plans | Execution: pwsh/read/glob/grep/edit |
+| `reviewer` | 审查员 (Reviewer) | Reviews code and designs for security holes, edge cases, performance, and maintainability risks | Read-only: read/glob/grep/web_search |
+| `researcher` | 研究员 (Researcher) | Researches technology, competitors, and facts; cites sources in its conclusions | Read-only: read/glob/grep/web_search |
+| `critic` | 评论家 (Critic) | Challenges assumptions, hunts blind spots, plays devil's advocate — hardens the plan before it ships | Read-only: read/glob/grep/web_search |
+| `writer` | 写手 (Writer) | Writes docs, reports, READMEs, and copy — precise language, clear structure | Execution: read/write/edit/glob/grep |
+| `looker` | 观察员 (Looker) | Multimodal analysis of images, screenshots, and UIs: describes layouts, extracts text, spots visual issues | Visual: read/read_image/vision |
+| `painter` | 画家 (Painter) | Image creation and generation: turns a description into visual assets or concepts | Visual: read/vision |
 
 ## Repository layout
 
@@ -150,14 +193,15 @@ collaboration-team:
 
 ## Usage examples
 
-```
-Hire two reviewer clones to audit the auth module and the payments module.
-Follow up with team_message: ask reviewer#1 about session-fixation attacks.
-Relay critic's objection to planner via team_message.
-Specialists help each other: researcher calls team_help for looker, the main agent relays the request and the answer.
-Run a roundtable (planner, reviewer, critic) on "should we split the monolith".
-Compare deepseek-v4-pro and zhipu/glm-4.5 on the same prompt with model_compare.
-```
+| Scenario | What the main agent does |
+|---|---|
+| Parallel audits | `team_call` with `instances: 2` hires two `reviewer` clones, one per module |
+| Follow-up question | `team_message` to `reviewer#1` about session-fixation attacks |
+| Relay an objection | `team_message` critic's objection to `planner` |
+| Specialist asks specialist | `researcher` calls `team_help` for `looker`; you forward the request and relay the answer back |
+| Group deliberation | `roundtable` with `planner`, `reviewer`, `critic` on one topic |
+| Model comparison | `model_compare` deepseek-v4-pro vs zhipu/glm-4.5 on the same prompt |
+| Read an image | `vision` sends a screenshot to the vision model and returns text analysis |
 
 ## Development
 
@@ -175,6 +219,10 @@ node scripts/e2e-team-host.mjs # drives the team host service: instance lifecycl
 node scripts/check-roster.mjs  # validates the collaboration-team roster in settings.yaml
 ```
 
-## License
+---
 
-[MIT](LICENSE)
+<div align="center">
+
+**[MIT](LICENSE)** · **[Repository](https://github.com/Socialist-Sister/dsh-collaboration)** · **[Releases](https://github.com/Socialist-Sister/dsh-collaboration/releases)**
+
+</div>

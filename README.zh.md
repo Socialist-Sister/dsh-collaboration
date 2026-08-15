@@ -12,7 +12,25 @@
 [![Release](https://img.shields.io/github/v/release/Socialist-Sister/dsh-collaboration)](https://github.com/Socialist-Sister/dsh-collaboration/releases)
 [![CI](https://img.shields.io/github/actions/workflow/status/Socialist-Sister/dsh-collaboration/ci.yml?branch=main)](https://github.com/Socialist-Sister/dsh-collaboration/actions)
 
+<kbd>team</kbd> <kbd>tool-team</kbd> <kbd>tool-model-compare</kbd> <kbd>tool-vision</kbd>
+
 </div>
+
+---
+
+## 目录
+
+- [这是什么](#这是什么)
+- [能力一览](#能力一览)
+- [工作原理](#工作原理)
+- [团队拓扑](#团队拓扑)
+- [专家名册与擅长领域](#专家名册与擅长领域)
+- [仓库结构](#仓库结构)
+- [快速开始](#快速开始)
+- [配置专家名册](#配置专家名册)
+- [使用示例](#使用示例)
+- [开发](#开发)
+- [License](#license)
 
 ## 这是什么
 
@@ -48,24 +66,49 @@ collaboration-team 名册（settings.yaml）   ←── 每个身份：人设 +
   └─ vision       → 图片交给视觉模型 → 文字分析回传
 ```
 
+## 团队拓扑
+
+每个身份都可雇佣多个分身实例（`reviewer#1`、`reviewer#2`……）。主代理是星型枢纽，所有消息都经它中转。
+
+```
+                     ┌─────────────────────┐
+                     │    主代理（你）      │
+                     │     星型枢纽        │
+                     └──────────┬──────────┘
+        team_call 雇佣 · team_message 双向转发
+     ┌──────────────┬────────────┼────────────┬──────────────┐
+     ▼              ▼            ▼            ▼              ▼
+ planner#1      coder#1      looker#1      writer#1      reviewer#2   …
+     │              │            │            │              │
+     └───────────── report 汇报 / 结算通知 ────────────────┘
+```
+
+专家之间从不直连。某专家需要另一位专家帮忙时（例如研究员请观察员读图），求助绕行主代理：
+
+```
+researcher#1 ── team_help ──►  主代理收到 [team-relay]
+      ▲                             │
+      │                             ▼  team_message 转给 looker#1
+      │                             │
+      └──── team_message ◄────  looker#1 report 描述
+```
+
 ## 专家名册与擅长领域
 
-默认名册预设十个身份，各有专长。工具面按职责分级：研究向身份（规划师/审查员/研究员/评论家）只配只读工具；执行向身份（工程师/调试员/写手）配 shell/文件/技能工具；视觉向身份（观察员/画家）配 read + vision。每个身份都可雇佣多个分身实例（`reviewer#1`、`reviewer#2`……）。
+默认名册预设十个身份，各有专长。工具面按职责分级：研究向身份只配只读工具，执行向身份配 shell/文件/技能工具，视觉向身份配 read + vision。
 
-| id | 名称 | 擅长领域 |
-|---|---|---|
-| `main` | 主代理 | 统筹全局：拆解目标、调度专家、拍板决策 —— 倾向于分配任务而非亲自动手 |
-| `planner` | 规划师 | 把复杂目标拆成可执行的步骤与里程碑，理清依赖、顺序与验收标准 |
-| `coder` | 工程师 | 写实现代码、落地功能、修缺陷，遵循项目现有风格与约定 |
-| `debugger` | 调试员 | 定位 bug：分析报错与日志，给出最小复现与修复方案 |
-| `reviewer` | 审查员 | 审查代码与方案：找安全漏洞、边界条件、性能与可维护性风险 |
-| `researcher` | 研究员 | 检索资料、调研技术与竞品、核实事实，输出有出处的结论 |
-| `critic` | 评论家 | 独立视角挑刺：质疑假设、寻找盲点、模拟反对者，让方案更稳 |
-| `writer` | 写手 | 撰写文档、报告、README 与文案，语言准确、结构清晰 |
-| `looker` | 观察员 | 看图、截图与 UI 的多模态分析：描述布局、提取文字、指出视觉问题 |
-| `painter` | 画家 | 图像创作与生成：按需求描述产出或构思视觉素材 |
-
-专家之间**经主代理中转**对话：某专家需要另一位专家帮忙时（例如研究员请观察员读图），调用 `team_help`；主代理收到 `[team-relay]` 求助后，用 `team_message` 转发给目标专家，再把回复转回求助方。
+| id | 名称 | 擅长领域 | 工具面 |
+|---|---|---|---|
+| `main` | 主代理 | 统筹全局：拆解目标、调度专家、拍板决策 —— 倾向于分配任务而非亲自动手 | 全量会话工具（不单独雇佣） |
+| `planner` | 规划师 | 把复杂目标拆成可执行的步骤与里程碑，理清依赖、顺序与验收标准 | 只读：read/glob/grep/web_search |
+| `coder` | 工程师 | 写实现代码、落地功能、修缺陷，遵循项目现有风格与约定 | 执行：pwsh/read/write/edit/glob/grep/web_search/skill/todo_write |
+| `debugger` | 调试员 | 定位 bug：分析报错与日志，给出最小复现与修复方案 | 执行：pwsh/read/glob/grep/edit |
+| `reviewer` | 审查员 | 审查代码与方案：找安全漏洞、边界条件、性能与可维护性风险 | 只读：read/glob/grep/web_search |
+| `researcher` | 研究员 | 检索资料、调研技术与竞品、核实事实，输出有出处的结论 | 只读：read/glob/grep/web_search |
+| `critic` | 评论家 | 独立视角挑刺：质疑假设、寻找盲点、模拟反对者，让方案更稳 | 只读：read/glob/grep/web_search |
+| `writer` | 写手 | 撰写文档、报告、README 与文案，语言准确、结构清晰 | 执行：read/write/edit/glob/grep |
+| `looker` | 观察员 | 看图、截图与 UI 的多模态分析：描述布局、提取文字、指出视觉问题 | 视觉：read/read_image/vision |
+| `painter` | 画家 | 图像创作与生成：按需求描述产出或构思视觉素材 | 视觉：read/vision |
 
 ## 仓库结构
 
@@ -132,14 +175,15 @@ collaboration-team:
 
 ## 使用示例
 
-```
-雇佣两个 reviewer 分身，分别审查认证模块和支付模块。
-用 team_message 让 reviewer#1 补充对会话固定攻击的分析。
-把 critic 的质疑转发给 planner 评估。
-专家互助：researcher 用 team_help 向 looker 求助读图，主代理负责转发请求与回传答复。
-开个 roundtable（planner、reviewer、critic）评估"把单体服务拆成微服务"。
-用 model_compare 对比 deepseek-v4-pro 和 zhipu/glm-4.5 对同一问题的回答。
-```
+| 场景 | 主代理怎么做 |
+|---|---|
+| 并行审查 | `team_call` 配 `instances: 2` 雇佣两个 reviewer 分身，分别审两个模块 |
+| 追问补充 | `team_message` 发给 `reviewer#1` 追问会话固定攻击 |
+| 转达异议 | `team_message` 把 critic 的质疑转给 planner |
+| 专家互助 | researcher 用 `team_help` 向 looker 求助，你转发请求并转回答复 |
+| 圆桌评审 | `roundtable` 召集 planner、reviewer、critic 就同一议题发言 |
+| 模型对比 | `model_compare` 同题对比 deepseek-v4-pro 与 zhipu/glm-4.5 |
+| 看图分析 | `vision` 把截图交给视觉模型，拿回文字分析 |
 
 ## 开发
 
@@ -157,6 +201,10 @@ node scripts/e2e-team-host.mjs # 驱动团队宿主服务：实例生命周期 +
 node scripts/check-roster.mjs  # 校验 settings.yaml 的 collaboration-team 名册
 ```
 
-## License
+---
 
-[MIT](LICENSE)
+<div align="center">
+
+**[MIT](LICENSE)** · **[仓库](https://github.com/Socialist-Sister/dsh-collaboration)** · **[Releases](https://github.com/Socialist-Sister/dsh-collaboration/releases)**
+
+</div>
