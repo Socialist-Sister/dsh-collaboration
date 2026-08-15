@@ -11,6 +11,11 @@
  *      instances() shows dismissed via label recovery, re-hiring never
  *      collides with a dismissed id).
  *
+ * v0.4 adds: the continuable-setup contribution installs a child-scoped
+ * `team_help` tool that relays specialist → specialist requests to the main
+ * agent as a waking `[team-relay]` report, with requester identity recovered
+ * from the live registry or (cold resume) from durable labels.
+ *
  * Run: node scripts/e2e-team-host.mjs
  */
 import { apply as applyHost } from '../packages/host/team/lib/index.js'
@@ -38,6 +43,8 @@ function makeHostMockCtx() {
     live: new Set(), // childIds that agents.get resolves (live); absent = settled
     hired: [], // startContinuable records { label, childId }
     interrupted: [],
+    setups: [], // registerContinuableSetup contributions
+    reports: [], // reportFrom records { childId, text, delivery }
   }
   let provided
   const ctx = {
@@ -64,6 +71,18 @@ function makeHostMockCtx() {
       followup: async () => 'm1', // MessageId (a string; the host wraps it)
       interrupt: async (childId) => {
         state.interrupted.push(childId)
+      },
+      registerContinuableSetup: (contribution) => {
+        state.setups.push(contribution)
+        return () => {}
+      },
+      reportFrom: async (child, content, options) => {
+        state.reports.push({
+          childId: String(child.session.id),
+          text: content[0]?.text ?? '',
+          delivery: options?.delivery,
+        })
+        return 'r1'
       },
     },
     agents: {
@@ -141,6 +160,53 @@ console.log('== @dsh-collaboration/team: close removes from registry, dismissal 
   assert(service.workingSet('s1').some((entry) => entry.instanceId === 'reviewer#3'), 'the re-hired instance is live in the working set')
   const msg = await service.followup(parent, 'reviewer#3', 'hi')
   assert(msg.messageId === 'm1', 'followup to the re-hired instance works (stale dismissal mark cleared)')
+}
+
+console.log('== @dsh-collaboration/team: team_help relay (v0.4) ==')
+{
+  const { ctx, state, getService } = makeHostMockCtx()
+  applyHost(ctx)
+  const service = getService()
+  assert(state.setups.length === 1, 'registers exactly one continuable setup contribution')
+  const hired = await service.spawn(parent, 'reviewer', 'T1')
+  let registeredTool
+  let sectionText = ''
+  const childCtx = {
+    systemPrompt: { section: ({ text }) => { sectionText = text; return () => {} } },
+    tools: { register: (tool) => { registeredTool = tool; return () => {} } },
+  }
+  const dispose = state.setups[0](childCtx)
+  assert(typeof dispose === 'function', 'the setup contribution returns a disposer')
+  assert(registeredTool?.name === 'team_help', 'installs the team_help tool into the child scope')
+  assert(sectionText.includes('team_help'), 'installs the team_help prompt guidance into the child scope')
+  const result = await registeredTool.execute(
+    { to: 'planner#1', task: '帮我把这个任务拆开' },
+    { agent: { session: { id: hired.childId, header: { parentSession: 's1' } } }, signal: undefined },
+  )
+  assert(result.messageId === 'r1', 'team_help executes via reportFrom and returns a message id')
+  const report = state.reports.at(-1)
+  assert(report.delivery === 'wakeup', 'the relay notice uses waking delivery (one new parent turn)')
+  assert(report.text.includes('[team-relay] reviewer#1 请求 planner#1'), `the relay notice names requester and target (${report.text})`)
+}
+{
+  // Cold resume: the live registry is empty (restart), so the requester
+  // identity must be recovered from the durable child label.
+  const { ctx, state } = makeHostMockCtx()
+  state.children = [{ id: 'child-9', label: 'team:looker#2' }]
+  applyHost(ctx)
+  const [setup] = state.setups
+  let registeredTool
+  const childCtx = {
+    systemPrompt: { section: () => () => {} },
+    tools: { register: (tool) => { registeredTool = tool; return () => {} } },
+  }
+  setup(childCtx)
+  await registeredTool.execute(
+    { to: 'researcher#1', task: '查一下这个接口的文档' },
+    { agent: { session: { id: 'child-9', header: { parentSession: 's1' } } }, signal: undefined },
+  )
+  const report = state.reports.at(-1)
+  assert(report.text.includes('[team-relay] looker#2 请求 researcher#1'), `cold-resumed child resolves its identity from the durable label (${report.text})`)
 }
 
 if (failures > 0) {

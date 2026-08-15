@@ -20,7 +20,7 @@
 
 | 参数 | 必填 | 说明 |
 |---|---|---|
-| `prompt` | ✅ | 发给每个模型的同一 prompt |
+| `prompt` | 是 | 发给每个模型的同一 prompt |
 | `models` | | `[{provider, model, label?}]`，覆盖配置默认集 |
 | `system` | | 可选系统提示 |
 

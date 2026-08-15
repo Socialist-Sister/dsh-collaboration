@@ -21,7 +21,11 @@
  * Specialist → main happens through the child's built-in `report` tool; the
  * continuation manager delivers a settlement notice to the parent when an
  * instance finishes. Specialist ↔ specialist communication is STAR-shaped:
- * routed through the main agent (the chat coordinator), never direct.
+ * routed through the main agent (the chat coordinator), never direct. v0.4
+ * adds the child-scoped `team_help` tool (installed via
+ * `registerContinuableSetup`): a specialist asks another specialist by
+ * reporting a `[team-relay]` request to the main agent, which forwards it
+ * with `team_message` and relays the answer back.
  *
  * Identities with an empty `provider`/`model` FOLLOW THE SESSION MODEL (the
  * chat-box selector): the roster works with zero configuration, and a user
@@ -30,6 +34,7 @@
  * @module @dsh-collaboration/team
  */
 import z from '@deepseek-ai/schemastery'
+import { defineTool } from '@deepseek-ai/dsh-tools'
 import { settingsNamespace } from '@deepseek-ai/dsh-settings'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { MessageId } from '@deepseek-ai/dsh-llm'
@@ -550,4 +555,114 @@ export function apply(ctx: any) {
     instances,
     workingSet,
   } satisfies TeamService)
+
+  // ── specialist → specialist relay (v0.4) ─────────────────────────────
+  // Specialists are continuable children and the authority protocol only
+  // authorizes child ↔ direct parent traffic. Specialist ↔ specialist
+  // therefore stays STAR-shaped and compliant: the child raises a `team_help`
+  // request, reportFrom() delivers it to the main agent as a `[team-relay]`
+  // notice (waking delivery = one new parent turn), and the main agent
+  // forwards it with `team_message`, then relays the answer back.
+
+  /** Resolve "who am I" for a child, so the main agent knows who asked. */
+  const resolveSelfInstanceId = async (agent: Agent): Promise<string> => {
+    const childId = String(agent.session.id)
+    for (const bucket of buckets.values()) {
+      for (const record of bucket.values()) {
+        if (String(record.childId) === childId) return record.instanceId
+      }
+    }
+    // Cold resume after a restart: the live registry is empty, so recover
+    // the identity from the durable label via the parent's child list.
+    try {
+      const parentId = agent.session.header?.parentSession
+      if (parentId !== undefined) {
+        const children = await ctx.subagents.listChildren(parentId)
+        for (const child of children) {
+          if (String(child.id) !== childId) continue
+          const parsed = parseInstanceLabel(child.label ?? '')
+          if (parsed !== undefined) return `${parsed.identityId}#${parsed.index}`
+        }
+      }
+    } catch {
+      /* persistence unavailable — fall through */
+    }
+    return `child:${childId.slice(0, 8)}`
+  }
+
+  const installTeamHelpTool = (childCtx: any) => {
+    const disposeSection = childCtx.systemPrompt.section({
+      name: 'tool:team_help',
+      order: 118, // right after the built-in report guidance (117)
+      text: [
+        '你需要另一位专家帮忙时（例如请 looker 读图、请 researcher 查资料），调用 team_help 求助：',
+        '主代理会把请求转发给目标专家，并把对方的回复转回给你。',
+        '求助必须自包含：写清目标实例 id（不确定就用身份 id，如 looker）和你要对方做什么。',
+      ].join('\n'),
+    })
+    let disposeTool: (() => void) | undefined
+    try {
+      disposeTool = childCtx.tools.register(
+        defineTool({
+          name: 'team_help',
+          description:
+            'Ask another specialist for help through the main agent: name the target specialist instance id (e.g. "looker#1", a bare identity id like "looker" is fine) and a self-contained task. The main agent relays your request to the target with team_message and later relays the answer back to you as a follow-up message. Only one open request at a time; after calling, keep working or wait for the relayed answer.',
+          parameters: {
+            to: {
+              type: 'string',
+              required: true,
+              description: 'Target specialist instance id, e.g. "looker#1" (a bare identity id like "looker" is also accepted).',
+            },
+            task: {
+              type: 'string',
+              required: true,
+              description: 'Self-contained task for the target — everything they need to act without seeing your conversation, including shared file paths.',
+            },
+          },
+          output: {
+            schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                messageId: { type: 'string', required: true },
+              },
+            },
+            render: (_args: any, value: any) => [
+              { type: 'text', text: `求助已通过主代理发出（送达消息 ${value.messageId}）。目标专家的回复会以新消息转回给你。` },
+            ],
+          },
+          async execute(args: any, exec: any) {
+            const from = await resolveSelfInstanceId(exec.agent)
+            const content = [
+              {
+                type: 'text',
+                text: `[team-relay] ${from} 请求 ${args.to} 处理：${args.task}`,
+              },
+            ]
+            return { messageId: await ctx.subagents.reportFrom(exec.agent, content, { delivery: 'wakeup', signal: exec.signal }) }
+          },
+        }),
+      )
+    } catch (error) {
+      try {
+        disposeSection()
+      } catch (rollbackError) {
+        throw new AggregateError([error, rollbackError], 'failed to register the team_help tool and roll back its prompt guidance')
+      }
+      throw error
+    }
+    return () => {
+      const failures: unknown[] = []
+      for (const dispose of [disposeTool, disposeSection]) {
+        try {
+          dispose()
+        } catch (error) {
+          failures.push(error)
+        }
+      }
+      if (failures.length > 0) throw new AggregateError(failures, 'failed to revoke team_help registrations')
+    }
+  }
+
+  ctx.subagents.registerContinuableSetup((childCtx: any) => installTeamHelpTool(childCtx))
 }

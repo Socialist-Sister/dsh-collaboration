@@ -23,6 +23,8 @@
 
 实例以 continuable 子代理实现：label 为 `team:<identityId>#<n>`（持久真相），进程内注册表为**按父会话分桶的缓存**。重启后计数从该父会话的持久 label 恢复（不撞名）；`close` 与 `followup` 对进程内不存在的实例也通过 label 扫描定位。专家用内置 `report` 工具汇报，结算时主代理自动收到通知。
 
+v0.4 起，每个专家实例额外获得子级作用域的 `team_help` 工具（经 `registerContinuableSetup` 安装）：专家需要另一位专家帮忙时调用 `team_help`，本包通过 `reportFrom` 以唤醒投递把 `[team-relay]` 求助发给主代理；主代理用 `team_message` 转发给目标专家，再把回复转回求助方。专家间从不直连，始终走「子 → 父 → 子」的授权路径。
+
 ## 默认名册
 
 | id | 身份 | 默认模型 |

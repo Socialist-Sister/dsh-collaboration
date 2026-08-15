@@ -23,8 +23,8 @@
 
 | 参数 | 必填 | 说明 |
 |---|---|---|
-| `images` | ✅ | 图片路径数组（工作区相对路径或绝对路径，PNG/JPEG/WebP/GIF） |
-| `question` | ✅ | 问视觉模型的问题 |
+| `images` | 是 | 图片路径数组（工作区相对路径或绝对路径，PNG/JPEG/WebP/GIF） |
+| `question` | 是 | 问视觉模型的问题 |
 | `provider` | | 覆盖默认路由 |
 | `model` | | 覆盖默认模型 |
 

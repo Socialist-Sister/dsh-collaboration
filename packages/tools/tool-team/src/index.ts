@@ -9,7 +9,10 @@
  *     roster identity (`instances` clones the same identity for parallel
  *     tasks); `wait: true` degrades to the v0.1 foreground one-shot.
  *   - `team_message`: main → instance follow-up (STAR topology: specialist
- *     ↔ specialist talk is relayed through the main agent).
+ *     ↔ specialist talk is relayed through the main agent). v0.4 adds relay
+ *     routing: when a specialist asks for help via its child-scoped
+ *     `team_help` tool, a `[team-relay]` notice reaches the main agent, which
+ *     forwards it with `team_message` and relays the answer back.
  *   - `team_status`:  live instance board (who is working / settled).
  *   - `team_close`:   interrupt one instance.
  *   - `roundtable`:   unchanged one-shot parallel panel.
@@ -79,7 +82,8 @@ const TEAM_CALL_DESCRIPTION =
 
 const TEAM_MESSAGE_DESCRIPTION =
   'Send one message to a hired specialist instance (e.g. reviewer#1); it wakes and answers via `report`. ' +
-  'Star topology: specialists do not message each other directly — relay through you. Dismissed instances refuse delivery.'
+  'Star topology: specialists do not message each other directly — relay through you. ' +
+  'Relay routing: when a `[team-relay]` request arrives from a specialist (via their team_help tool), forward the task to the named target with this tool; when the target reports the answer, relay it back to the requesting specialist with this tool. Dismissed instances refuse delivery.'
 
 const TEAM_STATUS_DESCRIPTION =
   'Show the live team board: every hired instance (id, identity, status working/settled/dismissed). Check it before messaging or closing instances.'
@@ -101,7 +105,9 @@ function renderTeam(roster: AgentRef[], working: InstanceRef[], mode: 'full' | '
     '你是团队主代理，**更倾向于分配任务而非亲自动手**：把思考、审查、调研、写作交给专家，你负责拆解、调度与综合决策。' +
       'hire 专家用 `team_call`（`instances` 可雇佣多个分身）；跟进/追问用 `team_message`；' +
       '查看谁在线用 `team_status`；解雇用 `team_close`。专家完成任务会用 report 汇报，结算时你会收到通知。' +
-      '专家之间不直接通话——需要转达就用 `team_message` 以你的名义转发。',
+      '专家之间不直接通话——需要转达就用 `team_message` 以你的名义转发。' +
+      '专家可通过 team_help 向你求助另一位专家：收到 `[team-relay]` 求助后，立即用 `team_message` 把任务转给目标专家，' +
+      '待其 report 后，再用 `team_message` 把回复转回求助方（标清“来自 X 的回复”）。',
     '',
     '名册（模板）：',
   ]

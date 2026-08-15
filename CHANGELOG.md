@@ -2,6 +2,17 @@
 
 本文件记录 dsh-collaboration 各版本的变更（遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 精神）。
 
+## [v0.4.0] - Unreleased
+
+### 新增：专家互聊（求助转发通道）
+
+- **`team_help` 子代理工具（host:team）**：通过 `registerContinuableSetup` 给每个持久专家实例安装子级作用域的 `team_help` 工具（伴随提示段，order 118，排在官方 report 指引之后）。专家需要另一位专家帮忙时调用 `team_help(to, task)`，本包用 `subagents.reportFrom` 以**唤醒投递**（wakeup）把 `[team-relay] <from> 请求 <to> 处理：<task>` 发给主代理。
+- **合规边界**：专家间**从不直连**——权威协议只授权 父↔子 通道，因此互聊走「子 → 父 → 子」的星型授权路径，不伪造父权限、不触碰兄弟 inbox。
+- **身份解析**：求助方身份优先从进程内注册表按 childId 解析；重启冷态回退到父会话持久 label 扫描（`team:reviewer#2` → `reviewer#2`）；再失败退回 `child:<id 前 8 位>`。
+- **主代理路由指引（tool-team）**：`team_message` 描述与名册提示段补充 relay 路由——收到 `[team-relay]` 求助立即 `team_message` 转发给目标专家，待其 report 后再 `team_message` 转回求助方。
+- **测试**：`scripts/e2e-team-host.mjs` 新增 v0.4 测试块——注册一个 continuable 贡献、安装 team_help 与提示段、执行后经 reportFrom 发出唤醒投递、`[team-relay]` 文本含求助方与目标、冷态 label 恢复身份解析。
+- **文档**：中英文 README 新增「专家名册与擅长领域」章节（十身份各自专长 + 工具面分级说明 + 互聊机制）；README 与各包 README 移除全部 emoji。
+
 ## [v0.3.2] - Unreleased
 
 ### 修复与改进

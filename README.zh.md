@@ -25,11 +25,11 @@
 
 | 能力 | 包 | 说明 |
 |---|---|---|
-| 🧑‍🤝‍🧑 专家名册 | `@dsh-collaboration/team` | 预设十身份（主代理/规划师/工程师/调试员/审查员/研究员/评论家/写手/观察员/画家），各司其职；每个身份的模型在 `settings.yaml` 自行配置，**改完即生效**；留空 = 跟随主模型。v0.2 起身份即模板，可雇佣为**持久专家实例**（可多分身） |
-| 🎯 团队控制台 | `@dsh-collaboration/tool-team` | `team_call` 雇佣持久专家实例（`instances` 分身、`tasks` 按任务给每个分身分派不同工作）；`team_message` 追问/转发（星型拓扑）；`team_status` 团队面板；`team_close` 解散；`roundtable` 一次性并行圆桌 |
-| ⚖️ 模型对比 | `@dsh-collaboration/tool-model-compare` | 同一 prompt 并发发送多个模型，答案并排返回 |
-| 👁️ 多模态桥 | `@dsh-collaboration/tool-vision` | 纯文本主代理把图片/截图交给视觉模型，拿回文字分析 |
-| 🎁 一键预设 | `config/agent-presets/collaboration` | standard 全量工具 + 上述工具（显示名：**协同模式**） |
+| 专家名册 | `@dsh-collaboration/team` | 预设十身份（主代理/规划师/工程师/调试员/审查员/研究员/评论家/写手/观察员/画家），各司其职；每个身份的模型在 `settings.yaml` 自行配置，**改完即生效**；留空 = 跟随主模型。身份即模板，可雇佣为**持久专家实例**（可多分身）。v0.4 起专家自带 `team_help` 工具，可经主代理向其他专家求助 |
+| 团队控制台 | `@dsh-collaboration/tool-team` | `team_call` 雇佣持久专家实例（`instances` 分身、`tasks` 按任务给每个分身分派不同工作）；`team_message` 追问/转发（星型拓扑，v0.4 增加 relay 路由）；`team_status` 团队面板；`team_close` 解散；`roundtable` 一次性并行圆桌 |
+| 模型对比 | `@dsh-collaboration/tool-model-compare` | 同一 prompt 并发发送多个模型，答案并排返回 |
+| 多模态桥 | `@dsh-collaboration/tool-vision` | 纯文本主代理把图片/截图交给视觉模型，拿回文字分析 |
+| 一键预设 | `config/agent-presets/collaboration` | standard 全量工具 + 上述工具（显示名：**协同模式**） |
 
 ## 工作原理
 
@@ -42,11 +42,30 @@ collaboration-team 名册（settings.yaml）   ←── 每个身份：人设 +
         ▼
 主代理（协同模式预设，星型枢纽）
   ├─ team_call    → 雇佣持久专家实例（可多分身）→ 专家用 report 汇报 / 结算通知
-  ├─ team_message → 追问/转发任何实例（专家间通信经主代理中转）
+  ├─ team_message → 追问/转发任何实例（专家间用 team_help 求助，经主代理中转）
   ├─ team_status  → 实时团队面板；team_close → 解散实例
   ├─ model_compare → 多模型同题并发对比
   └─ vision       → 图片交给视觉模型 → 文字分析回传
 ```
+
+## 专家名册与擅长领域
+
+默认名册预设十个身份，各有专长。工具面按职责分级：研究向身份（规划师/审查员/研究员/评论家）只配只读工具；执行向身份（工程师/调试员/写手）配 shell/文件/技能工具；视觉向身份（观察员/画家）配 read + vision。每个身份都可雇佣多个分身实例（`reviewer#1`、`reviewer#2`……）。
+
+| id | 名称 | 擅长领域 |
+|---|---|---|
+| `main` | 主代理 | 统筹全局：拆解目标、调度专家、拍板决策 —— 倾向于分配任务而非亲自动手 |
+| `planner` | 规划师 | 把复杂目标拆成可执行的步骤与里程碑，理清依赖、顺序与验收标准 |
+| `coder` | 工程师 | 写实现代码、落地功能、修缺陷，遵循项目现有风格与约定 |
+| `debugger` | 调试员 | 定位 bug：分析报错与日志，给出最小复现与修复方案 |
+| `reviewer` | 审查员 | 审查代码与方案：找安全漏洞、边界条件、性能与可维护性风险 |
+| `researcher` | 研究员 | 检索资料、调研技术与竞品、核实事实，输出有出处的结论 |
+| `critic` | 评论家 | 独立视角挑刺：质疑假设、寻找盲点、模拟反对者，让方案更稳 |
+| `writer` | 写手 | 撰写文档、报告、README 与文案，语言准确、结构清晰 |
+| `looker` | 观察员 | 看图、截图与 UI 的多模态分析：描述布局、提取文字、指出视觉问题 |
+| `painter` | 画家 | 图像创作与生成：按需求描述产出或构思视觉素材 |
+
+专家之间**经主代理中转**对话：某专家需要另一位专家帮忙时（例如研究员请观察员读图），调用 `team_help`；主代理收到 `[team-relay]` 求助后，用 `team_message` 转发给目标专家，再把回复转回求助方。
 
 ## 仓库结构
 
@@ -117,6 +136,7 @@ collaboration-team:
 雇佣两个 reviewer 分身，分别审查认证模块和支付模块。
 用 team_message 让 reviewer#1 补充对会话固定攻击的分析。
 把 critic 的质疑转发给 planner 评估。
+专家互助：researcher 用 team_help 向 looker 求助读图，主代理负责转发请求与回传答复。
 开个 roundtable（planner、reviewer、critic）评估"把单体服务拆成微服务"。
 用 model_compare 对比 deepseek-v4-pro 和 zhipu/glm-4.5 对同一问题的回答。
 ```
@@ -133,6 +153,7 @@ pnpm build        # 构建
 
 ```bash
 node scripts/e2e-tools.mjs     # 新进程驱动工具包 apply()，复现预设挂载校验
+node scripts/e2e-team-host.mjs # 驱动团队宿主服务：实例生命周期 + team_help 求助中转
 node scripts/check-roster.mjs  # 校验 settings.yaml 的 collaboration-team 名册
 ```
 
