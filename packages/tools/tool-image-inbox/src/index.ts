@@ -11,11 +11,11 @@
  *     the `dsh.client` scan) intercepts image PASTES in collaboration sessions
  *     and sends them to the `imageInbox/upload` Remote method — no visible UI;
  *   - the host saves each image as a FILE inside the session workspace
- *     (`.dsh-inbox/`) and delivers a plugin-sourced user message naming the
- *     path (adaptive: routes to looker/vision when a vision identity is
- *     configured, otherwise instructs the main agent to hint the user);
- *   - the main agent then routes the PATH to `vision` or to `looker` via
- *     `team_call` — the text-only model never sees image content.
+ *     (`.dsh-inbox/`) and returns the path (plus a short note when the roster
+ *     lacks a configured vision identity). It NEVER injects a message: the
+ *     path lands in the composer DRAFT, so the main agent acts only when the
+ *     user presses Enter — its persona/roster guidance routes image paths to
+ *     looker/vision, and the text-only model never sees image content.
  *
  * The `capability` Remote method tells the client whether to intercept: it
  * intercepts ONLY when the session's composed preset is `collaboration`
@@ -29,7 +29,6 @@
  * @module @dsh-collaboration/tool-image-inbox
  */
 import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { Context } from '@deepseek-ai/cordis'
 import { z } from 'zod'
@@ -44,7 +43,7 @@ export const MAX_IMAGE_BYTES = 20 * 1024 * 1024
 const SESSION_ID_SCHEMA = z.intersection(z.string(), z.unknown())
 const UPLOAD_INPUT_SCHEMA = z.object({ name: z.string(), mediaType: z.string(), data: z.string() })
 const UPLOAD_RESULT_SCHEMA = z.union([
-  z.object({ ok: z.literal(true), path: z.string() }),
+  z.object({ ok: z.literal(true), path: z.string(), note: z.string() }),
   z.object({ ok: z.literal(false), error: z.object({ code: z.string(), message: z.string() }) }),
 ])
 const CAPABILITY_RESULT_SCHEMA = z.object({ intercept: z.boolean() })
@@ -138,7 +137,7 @@ export interface UploadInput {
   data: string
 }
 
-export type UploadResult = { ok: true; path: string } | { ok: false; error: { code: string; message: string } }
+export type UploadResult = { ok: true; path: string; note: string } | { ok: false; error: { code: string; message: string } }
 
 export type CapabilityResult = { intercept: boolean }
 
@@ -212,18 +211,13 @@ export default class ImageInboxService extends TypertRemoteService {
     const rel = `.dsh-inbox/${Date.now()}-${sanitizeName(input.name, mediaType)}`
     await mkdir(join(cwd, '.dsh-inbox'), { recursive: true })
     await writeFile(join(cwd, rel), data)
-    const text = visionConfigured(this.ctx)
-      ? `[图片上传] 用户粘贴了一张图片，已存到会话工作区：${rel}\n` +
-        `请立即处理：team_call 雇佣观察员（looker）并把该路径交给它分析——视觉分析是它的本职工作，优先派给它；` +
-        `若只想快速过一眼，也可用 vision 工具。完成后把结果告诉用户。`
-      : `[图片上传] 用户粘贴了一张图片，已存到会话工作区：${rel}\n` +
-        `名册里的观察员（looker）尚未配置视觉模型。请先用 vision 工具尝试分析；若也不可用，请提示用户：` +
-        `在 settings.yaml 的 collaboration-team 给 looker 配置视觉模型（如 zai/glm-5v-turbo），或把会话模型切换到视觉路由。`
-    const message = createUserMessage({
-      content: [{ type: 'text', text }],
-      source: { kind: 'plugin', plugin: '@dsh-collaboration/tool-image-inbox' },
-    })
-    agent.followup(message)
-    return { ok: true, path: rel }
+    // The image must NOT start a turn: uploading only returns the path (and,
+    // when the roster lacks a configured vision identity, a short note the
+    // client folds into the draft). The main agent acts when the USER sends
+    // the draft — its persona/roster guidance routes image paths to looker.
+    const note = visionConfigured(this.ctx)
+      ? ''
+      : '观察员未配置视觉模型：请先提示用户在 settings.yaml 给 looker 配置，或把会话切到视觉路由'
+    return { ok: true, path: rel, note }
   }
 }

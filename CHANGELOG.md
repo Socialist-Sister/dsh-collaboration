@@ -2,6 +2,14 @@
 
 本文件记录 dsh-collaboration 各版本的变更（遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 精神）。
 
+## [v0.5.2] - Unreleased
+
+### 修复：粘贴不再立即唤醒主代理（tool-image-inbox 0.2.2）
+
+- **去掉上传时的宿主消息注入**：此前宿主在落盘后立即 `agent.followup` 一条 plugin 消息，粘贴瞬间主代理就开始思考，用户只能追着插队。现在上传只返回路径（looker 未配置时附一句提示），客户端把它插进**草稿**即结束——主代理在用户**按下回车**后才开工，用户有充足时间补字调整。
+- **草稿提示**：looker 未配置时，草稿行附「（观察员未配置视觉模型：请先提示用户在 settings.yaml 给 looker 配置，或把会话切到视觉路由）」；已配置则只有路径行。
+- **验证**：宿主 e2e 断言改为「上传零投递」+ note 变体；浏览器 e2e 新增回归断言「粘贴后不出现注入消息、代理不被唤醒」，--send 全链路复验通过（回车后主代理 glob 确认文件、起 2 个子代理转交 looker、回合完成、零失败请求）。新增 `scripts/setup-verify-env.mjs`（一键重建临时验证环境）。
+
 ## [v0.5.1] - Unreleased
 
 ### 修复与调优（实测反馈）

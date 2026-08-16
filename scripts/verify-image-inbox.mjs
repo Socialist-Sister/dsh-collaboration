@@ -152,6 +152,10 @@ try {
     const draft = await ta.inputValue()
     console.log(`draft after paste: ${JSON.stringify(draft)}`)
     assert(draft.includes('[图片: .dsh-inbox/'), `paste intercepted: draft contains the workspace path (${draft.trim()})`)
+    // Regression: pasting must NOT start a turn. The old injected host
+    // message appeared as a user bubble and woke the agent immediately.
+    const afterPaste = await page.evaluate(() => (document.body.textContent ?? '').replace(/\s+/g, ' '))
+    assert(!afterPaste.includes('用户粘贴了一张图片'), 'paste does not inject a message or wake the agent')
     await shot('04-after-paste')
 
     const draftPath = (draft.match(/\[图片: ([^\]]+)\]/) ?? [])[1]

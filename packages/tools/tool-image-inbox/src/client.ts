@@ -37,7 +37,7 @@ const UPLOAD_INPUT_SCHEMA = z.object({
 })
 
 const UPLOAD_RESULT_SCHEMA = z.union([
-  z.object({ ok: z.literal(true), path: z.string() }),
+  z.object({ ok: z.literal(true), path: z.string(), note: z.string() }),
   z.object({ ok: z.literal(false), error: z.object({ code: z.string(), message: z.string() }) }),
 ])
 
@@ -158,7 +158,7 @@ async function refreshCapability() {
   runtime.ready = true
 }
 
-async function uploadFile(file: File): Promise<{ ok: boolean; path?: string; error?: { code: string; message: string } }> {
+async function uploadFile(file: File): Promise<{ ok: boolean; path?: string; note?: string; error?: { code: string; message: string } }> {
   const data = await fileToBase64(file)
   const rpc = await runtime.imageInbox.upload(runtime.sessionId, {
     name: file.name,
@@ -191,7 +191,9 @@ async function handleImagePaste(target: HTMLTextAreaElement, files: File[]) {
     let line: string
     try {
       const result = await uploadFile(file)
-      line = result.ok ? `[图片: ${result.path}]` : `[图片上传失败: ${result.error?.message ?? '未知错误'}]`
+      line = result.ok
+        ? `[图片: ${result.path}]${result.note ? `（${result.note}）` : ''}`
+        : `[图片上传失败: ${result.error?.message ?? '未知错误'}]`
     } catch (error) {
       line = `[图片上传失败: ${error instanceof Error ? error.message : String(error)}]`
     }

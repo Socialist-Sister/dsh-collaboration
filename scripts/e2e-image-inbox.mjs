@@ -99,12 +99,8 @@ try {
     assert(typeof result.path === 'string' && result.path.startsWith('.dsh-inbox/'), `upload returns a workspace-relative path (${result.path})`)
     const written = await readFile(join(dir, result.path))
     assert(written.equals(PNG_BYTES), 'the image bytes land in <cwd>/.dsh-inbox/ verbatim')
-    assert(state.delivered.length === 1, 'exactly one message is delivered to the agent')
-    const message = state.delivered[0]
-    assert(message.role === 'user' && message.source.kind === 'plugin', 'the delivered message is plugin-sourced user content')
-    assert(message.content[0].text.includes('[图片上传]') && message.content[0].text.includes(result.path), 'the delivered message names the workspace path')
-    assert(message.content[0].text.includes('looker') && !message.content[0].text.includes('尚未配置'), 'looker configured: the message routes to the specialist')
-    assert(message.content[0].text.indexOf('looker') < message.content[0].text.indexOf('vision'), 'looker configured: the specialist is preferred over the vision tool')
+    assert(state.delivered.length === 0, 'uploading never starts a turn: no message is delivered to the agent')
+    assert(result.note === '', 'looker configured: the returned note is empty')
     assert(/\.png$/i.test(result.path), 'the file extension follows the media type')
     ctx.name = 'unused'
   }
@@ -116,8 +112,8 @@ try {
       data: PNG_BYTES.toString('base64'),
     })
     assert(result.ok === true, 'upload still succeeds without a configured looker')
-    const text = state.delivered[0].content[0].text
-    assert(text.includes('尚未配置') && text.includes('settings.yaml'), 'looker unconfigured: the message instructs the agent to hint the user')
+    assert(state.delivered.length === 0, 'uploading never starts a turn (unconfigured looker included)')
+    assert(result.note.includes('未配置') && result.note.includes('settings.yaml'), `looker unconfigured: the returned note guides the user (${result.note})`)
   }
   {
     const { service, agent } = makeCtx(dir)

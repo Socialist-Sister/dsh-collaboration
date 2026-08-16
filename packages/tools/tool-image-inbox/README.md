@@ -35,6 +35,7 @@ DeepSeek Harness 的 `prompt` 端点在提交时校验当前模型的 `inputModa
 
 ## 行为
 
+- **粘贴只入草稿，绝不唤醒代理**：上传只把路径写回客户端并插进草稿（looker 未配置时附带一句提示）；主代理在你**按下回车**后才开始处理，你有充足时间补字、调整。用户消息里的路径按 persona/名册指引转交 looker。
 - 接受 PNG/JPEG/WebP/GIF，单张上限 20MB；文件名单路径段消毒，扩展名跟随媒体类型；
 - 上传失败时把错误原因插入草稿（`[图片上传失败: ...]`），不吞错；
 - 拦截判定：仅当会话的 composed preset 为 `collaboration`（宿主 `capability` 实时返回，会话切换时刷新）；
