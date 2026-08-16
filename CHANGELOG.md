@@ -2,18 +2,6 @@
 
 本文件记录 dsh-collaboration 各版本的变更（遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 精神）。
 
-## [v0.5.0] - Unreleased
-
-### 新增：图片收件箱（纯文本主模型的界面传图通道）
-
-- **问题根因**：聊天框贴图在 `prompt` 端点受当前模型 `inputModalities` 准入校验——DeepSeek 纯文本路由显式声明不含 `image`，图片在提交时即被拒（`MODEL_DOES_NOT_SUPPORT_IMAGES`），配了观察员也接不到图。
-- **新包 `@dsh-collaboration/tool-image-inbox` 0.1.0（host+client 双面）**：
-  - 客户端（包内 `dsh.client` 声明自动挂载）：在输入框工具行（`conversation.input.left` 槽位）注册「上传图片」按钮，选图后经 typert 网关调用 `imageInbox/upload` Remote 方法。
-  - 宿主（`cordis.patch.yml` 新行 `collaboration-image-inbox`）：校验（20MB 上限、媒体类型、文件名单路径段消毒）→ 把图片存成会话工作区文件（`.dsh-inbox/`）→ 以 plugin 来源的用户消息把路径交给主代理，由主代理按既有指引转交 `vision` 或 `team_call looker`。
-  - **合规**：不碰 api-proxy 门槛、不谎报多模态——文本主模型只看到路径文字，图片从不进入纯文本线路。
-- **测试**：`scripts/e2e-image-inbox.mjs`——服务注册、字节落盘、plugin 来源消息与路径、20MB 上限、参数校验、无工作区拒绝、文件名消毒。
-- **文档**：双语 README 新增「纯文本主模型怎么收图」章节（上传按钮/工作区文件/多模态主模型三条路径）+ image-inbox 能力行与安装步骤；`docs/installation.md` 同步。
-
 ## [v0.4.1] - Unreleased
 
 ### 行为调教：协调者人设与派活流程（实测反馈）
