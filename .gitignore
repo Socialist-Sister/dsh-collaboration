@@ -8,3 +8,6 @@ dist/
 .DS_Store
 research/
 .dsh/
+
+# image-inbox uploads (transient paste artifacts)
+.dsh-inbox/
