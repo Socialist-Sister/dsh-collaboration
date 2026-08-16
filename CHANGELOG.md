@@ -2,6 +2,14 @@
 
 本文件记录 dsh-collaboration 各版本的变更（遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 精神）。
 
+## [v0.5.1] - Unreleased
+
+### 修复与调优（实测反馈）
+
+- **路由指引重排（tool-image-inbox 0.2.1）**：looker 已配置时，注入消息改为**优先 team_call 雇佣 looker**（视觉分析是它的本职工作），vision 工具降为快速备选——此前 vision 在前，若 vision 的预设配置指向未添加的供应商（如示例 zhipu），主代理会先失败再降级到 looker。e2e 增加「looker 先于 vision」顺序断言。
+- **预设注释**：仓库预设 tool-vision 行注明 provider/model 必须指向实际添加的视觉供应商（示例 zhipu 仅示意）。
+- **用户本机预设副本**：tool-vision 改指 `zai/glm-5v-turbo`、model-compare 的 GLM 条目改指 `zai/glm-5.2` 与 `zai/glm-5v-turbo`（本机未添加 zhipu）。
+
 ## [v0.5.0] - Unreleased
 
 ### 新增：图片收件箱（隐形粘贴桥——纯文本主模型直接粘贴图片）

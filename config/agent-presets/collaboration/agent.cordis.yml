@@ -223,6 +223,8 @@
       - { provider: zhipu, model: glm-4-flash, label: GLM-4-Flash }
 
 # 多模态桥：DeepSeek 主代理把图片交给视觉模型，拿回文字分析继续工作。
+# 注意：provider/model 必须指向你在官方「设置 → 模型」里实际添加的视觉供应商
+# （下面的 zhipu/glm-4v-flash 只是示例；如你的视觉路由是 zai，就改成 zai/glm-5v-turbo）。
 - id: tool-vision
   name: '@dsh-collaboration/tool-vision'
   config:

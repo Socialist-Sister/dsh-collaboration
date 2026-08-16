@@ -214,7 +214,8 @@ export default class ImageInboxService extends TypertRemoteService {
     await writeFile(join(cwd, rel), data)
     const text = visionConfigured(this.ctx)
       ? `[图片上传] 用户粘贴了一张图片，已存到会话工作区：${rel}\n` +
-        `请立即处理：用 vision 工具分析这张图，或 team_call 雇佣观察员（looker）并把该路径交给它分析；完成后把结果告诉用户。`
+        `请立即处理：team_call 雇佣观察员（looker）并把该路径交给它分析——视觉分析是它的本职工作，优先派给它；` +
+        `若只想快速过一眼，也可用 vision 工具。完成后把结果告诉用户。`
       : `[图片上传] 用户粘贴了一张图片，已存到会话工作区：${rel}\n` +
         `名册里的观察员（looker）尚未配置视觉模型。请先用 vision 工具尝试分析；若也不可用，请提示用户：` +
         `在 settings.yaml 的 collaboration-team 给 looker 配置视觉模型（如 zai/glm-5v-turbo），或把会话模型切换到视觉路由。`

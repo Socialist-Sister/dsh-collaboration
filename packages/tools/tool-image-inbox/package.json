@@ -1,6 +1,6 @@
 {
   "name": "@dsh-collaboration/tool-image-inbox",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Invisible image-paste routing for DeepSeek Harness collaboration mode: a client bridge intercepts image pastes for text-only main agents, stores them as workspace files, and hands the path to the main agent for looker/vision routing.",
   "license": "MIT",
   "type": "module",

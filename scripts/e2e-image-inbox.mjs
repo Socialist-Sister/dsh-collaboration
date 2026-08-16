@@ -104,6 +104,7 @@ try {
     assert(message.role === 'user' && message.source.kind === 'plugin', 'the delivered message is plugin-sourced user content')
     assert(message.content[0].text.includes('[图片上传]') && message.content[0].text.includes(result.path), 'the delivered message names the workspace path')
     assert(message.content[0].text.includes('looker') && !message.content[0].text.includes('尚未配置'), 'looker configured: the message routes to the specialist')
+    assert(message.content[0].text.indexOf('looker') < message.content[0].text.indexOf('vision'), 'looker configured: the specialist is preferred over the vision tool')
     assert(/\.png$/i.test(result.path), 'the file extension follows the media type')
     ctx.name = 'unused'
   }
