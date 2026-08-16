@@ -5,6 +5,7 @@ dsh-collaboration **不自带模型适配器**：模型供应商全部通过 DSH
 | 组件 | 平面 | 安装位置 |
 |---|---|---|
 | `@dsh-collaboration/team` 专家名册 | 宿主（host） | profile workspace + `cordis.patch.yml`；名册本体在 `settings.yaml` |
+| `@dsh-collaboration/tool-image-inbox` 图片上传 | 宿主（host，client 半面自动挂载） | profile workspace + `cordis.patch.yml` |
 | `@dsh-collaboration/tool-*` 三个工具 | 代理（agent preset） | `collaboration` 预设行 |
 | `collaboration` 预设（显示名：协同模式） | 代理 | `${DSH_HOME}/.agent-presets/collaboration/` |
 
@@ -22,7 +23,7 @@ dsh-collaboration **不自带模型适配器**：模型供应商全部通过 DSH
 在 profile 目录执行：
 
 ```powershell
-pnpm add -w @dsh-collaboration/team @dsh-collaboration/tool-team @dsh-collaboration/tool-model-compare @dsh-collaboration/tool-vision
+pnpm add -w @dsh-collaboration/team @dsh-collaboration/tool-team @dsh-collaboration/tool-model-compare @dsh-collaboration/tool-vision @dsh-collaboration/tool-image-inbox
 ```
 
 profile workspace 使用 `nodeLinker: hoisted`，包与其依赖会被提升到 profile 根 `node_modules`，宿主行与预设行都从这里解析。
@@ -35,6 +36,8 @@ profile workspace 使用 `nodeLinker: hoisted`，包与其依赖会被提升到 
 - insert:
     - id: collaboration-team
       name: '@dsh-collaboration/team'
+    - id: collaboration-image-inbox
+      name: '@dsh-collaboration/tool-image-inbox'
 ```
 
 **不要禁用内置 `llm-pi-ai`**——官方「添加供应商」功能就是它提供的。本套件不注册任何模型路由，与官方目录天然无冲突。
@@ -104,10 +107,14 @@ Copy-Item -Recurse <repo>\config\agent-presets\collaboration "$env:USERPROFILE\.
 
 把 docs/screenshot.png 交给 looker，让他描述这张 UI 截图里的布局和问题。
 
+点输入框「上传图片」按钮选一张图：图片会存进工作区，主代理自动转交观察员分析。
+
 开个 roundtable（planner、reviewer、critic）评估"把单体服务拆成微服务"这个决定。
 
 用 model_compare 对比 deepseek-v4-pro 和 zhipu/glm-4.5 对同一问题的回答。
 ```
+
+> **纯文本主模型收图**：聊天框贴图受模型 `inputModalities` 校验（文本模型不含 image 会被拒），所以贴图不可用时有三条路：① 输入框「上传图片」按钮（`tool-image-inbox`，图片存进工作区 `.dsh-inbox/` 并把路径交给主代理）；② 手动把图放进工作区目录再报路径；③ 会话切到视觉模型（如 `zai/glm-5v-turbo`）直接贴图。
 
 ## 故障排查
 
@@ -115,4 +122,5 @@ Copy-Item -Recurse <repo>\config\agent-presets\collaboration "$env:USERPROFILE\.
 |---|---|
 | 「协同模式」工具报 `NO_ADAPTER` / 模型调用失败 | 名册/工具配置里的 `provider` 未在官方「设置 → 模型」中添加；用添加供应商建同名路由，或改配置指向已添加的路由 |
 | 观察员看图失败 | 官方适配器对所选供应商+模型是否支持视觉输入；换支持视觉的模型实测 |
+| 输入框没有「上传图片」按钮 | `tool-image-inbox` 宿主行未插入或包未装进 profile；确认 patch 行存在后重启 DSH |
 | 预设挂载报行未激活 | 确认宿主装有 `subagents`/`llm`/`fs`/`attachments`/`collaborationTeam` 服务（`team` 宿主行已插 + 标准部署） |

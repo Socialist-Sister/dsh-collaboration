@@ -12,7 +12,7 @@
 [![Release](https://img.shields.io/github/v/release/Socialist-Sister/dsh-collaboration)](https://github.com/Socialist-Sister/dsh-collaboration/releases)
 [![CI](https://img.shields.io/github/actions/workflow/status/Socialist-Sister/dsh-collaboration/ci.yml?branch=main)](https://github.com/Socialist-Sister/dsh-collaboration/actions)
 
-<kbd>team</kbd> <kbd>tool-team</kbd> <kbd>tool-model-compare</kbd> <kbd>tool-vision</kbd>
+<kbd>team</kbd> <kbd>tool-team</kbd> <kbd>tool-model-compare</kbd> <kbd>tool-vision</kbd> <kbd>tool-image-inbox</kbd>
 
 </div>
 
@@ -24,6 +24,7 @@
 - [能力一览](#能力一览)
 - [工作原理](#工作原理)
 - [团队拓扑](#团队拓扑)
+- [纯文本主模型怎么收图](#纯文本主模型怎么收图)
 - [专家名册与擅长领域](#专家名册与擅长领域)
 - [仓库结构](#仓库结构)
 - [快速开始](#快速开始)
@@ -47,6 +48,7 @@
 | 团队控制台 | `@dsh-collaboration/tool-team` | `team_call` 雇佣持久专家实例（`instances` 分身、`tasks` 按任务给每个分身分派不同工作）；`team_message` 追问/转发（星型拓扑，v0.4 增加 relay 路由）；`team_status` 团队面板；`team_close` 解散；`roundtable` 一次性并行圆桌 |
 | 模型对比 | `@dsh-collaboration/tool-model-compare` | 同一 prompt 并发发送多个模型，答案并排返回 |
 | 多模态桥 | `@dsh-collaboration/tool-vision` | 纯文本主代理把图片/截图交给视觉模型，拿回文字分析 |
+| 图片收件箱 | `@dsh-collaboration/tool-image-inbox` | 输入框加「上传图片」按钮：图片存成会话工作区文件，把路径交给主代理转交 looker/vision——纯文本主模型也能收图 |
 | 一键预设 | `config/agent-presets/collaboration` | standard 全量工具 + 上述工具（显示名：**协同模式**） |
 
 ## 工作原理
@@ -93,6 +95,14 @@ researcher#1 ── team_help ──►  主代理收到 [team-relay]
       └──── team_message ◄────  looker#1 report 描述
 ```
 
+## 纯文本主模型怎么收图
+
+聊天框贴图入口受当前模型的 `inputModalities` 校验：DeepSeek 纯文本路由显式声明不含 `image`，贴图在提交时即被拒绝——配了观察员也接不到图。三条合规路径：
+
+1. **上传按钮**（最省事）：`tool-image-inbox` 在输入框工具行加「上传图片」按钮，图片存成会话工作区文件（`.dsh-inbox/`），主代理收到路径后转交 `vision` 或雇佣 `looker` 分析。
+2. **工作区文件**：自己把图片放进会话工作区目录，告诉主代理路径。
+3. **多模态主模型**：会话切到视觉路由（如 `zai` / `glm-5v-turbo`），贴图直接进主代理，仍可转交 `looker`。
+
 ## 专家名册与擅长领域
 
 默认名册预设十个身份，各有专长。工具面按职责分级：研究向身份只配只读工具，执行向身份配 shell/文件/技能工具，视觉向身份配 read + vision。
@@ -118,6 +128,7 @@ packages/
   tools/tool-team/               team_call 点名 + roundtable 圆桌
   tools/tool-model-compare/      同题多模型对比
   tools/tool-vision/             多模态桥
+  tools/tool-image-inbox/        纯文本主模型的图片上传入口
 config/
   agent-presets/collaboration/   开箱即用的代理预设（协同模式）
 docs/                            安装、配置与使用文档
@@ -128,20 +139,22 @@ scripts/                         验证脚本
 
 > 详细步骤见 [docs/installation.md](docs/installation.md)。
 
-1. **安装四个包**到 DSH profile workspace：
+1. **安装五个包**到 DSH profile workspace：
 
    ```powershell
-   pnpm add -w @dsh-collaboration/team @dsh-collaboration/tool-team @dsh-collaboration/tool-model-compare @dsh-collaboration/tool-vision
+   pnpm add -w @dsh-collaboration/team @dsh-collaboration/tool-team @dsh-collaboration/tool-model-compare @dsh-collaboration/tool-vision @dsh-collaboration/tool-image-inbox
    ```
 
    > 未发布到 npm 前，可从 [Releases](https://github.com/Socialist-Sister/dsh-collaboration/releases) 下载 `.tgz` 附件安装。
 
-2. **插入名册宿主行**（`cordis.patch.yml`）：
+2. **插入宿主行**（`cordis.patch.yml`）：
 
    ```yaml
    - insert:
        - id: collaboration-team
          name: '@dsh-collaboration/team'
+       - id: collaboration-image-inbox
+         name: '@dsh-collaboration/tool-image-inbox'
    ```
 
 3. **添加模型供应商**：官方「设置 → 模型 → 添加供应商」接入各家（示例见下表）。
@@ -184,6 +197,7 @@ collaboration-team:
 | 圆桌评审 | `roundtable` 召集 planner、reviewer、critic 就同一议题发言 |
 | 模型对比 | `model_compare` 同题对比 deepseek-v4-pro 与 zhipu/glm-4.5 |
 | 看图分析 | `vision` 把截图交给视觉模型，拿回文字分析 |
+| 上传图片（纯文本主模型） | 点输入框「上传图片」按钮，路径进会话后主代理转交 `looker` |
 
 ## 开发
 
