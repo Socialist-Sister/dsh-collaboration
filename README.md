@@ -30,7 +30,7 @@ A user-configured roster of specialists with on-demand dispatch — models come 
 [![Release](https://img.shields.io/github/v/release/Socialist-Sister/dsh-collaboration)](https://github.com/Socialist-Sister/dsh-collaboration/releases)
 [![CI](https://img.shields.io/github/actions/workflow/status/Socialist-Sister/dsh-collaboration/ci.yml?branch=main)](https://github.com/Socialist-Sister/dsh-collaboration/actions)
 
-<kbd>team</kbd> <kbd>tool-team</kbd> <kbd>tool-model-compare</kbd> <kbd>tool-vision</kbd>
+<kbd>team</kbd> <kbd>tool-team</kbd> <kbd>tool-model-compare</kbd> <kbd>tool-vision</kbd> <kbd>tool-image-inbox</kbd>
 
 </div>
 
@@ -42,6 +42,7 @@ A user-configured roster of specialists with on-demand dispatch — models come 
 - [Features](#features)
 - [How it works](#how-it-works)
 - [Team topology](#team-topology)
+- [Images with a text-only main agent](#images-with-a-text-only-main-agent)
 - [The specialist roster](#the-specialist-roster)
 - [Repository layout](#repository-layout)
 - [Quick start](#quick-start)
@@ -65,6 +66,7 @@ Inspired by the multi-agent workbench idea of [oh-my-openagent](https://github.c
 | Team console | `@dsh-collaboration/tool-team` | `team_call` hires persistent specialists (`instances` clones one identity, `tasks` gives each clone its own task); `team_message` follow-ups/relays (star topology, v0.4 relay routing); `team_status` live board; `team_close` dismisses; `roundtable` one-shot parallel panel |
 | Model comparison | `@dsh-collaboration/tool-model-compare` | One prompt to several models in parallel, answers side by side |
 | Vision bridge | `@dsh-collaboration/tool-vision` | A text-only main agent sends images to a vision-capable model and works from the text analysis |
+| Image inbox | `@dsh-collaboration/tool-image-inbox` | An invisible paste bridge: pasting an image in a collaboration session stores it as a workspace file and puts the path in the draft — no button, works for text-only main agents, routed to looker/vision |
 | One-line preset | `config/agent-presets/collaboration` | Full `standard` toolset + the tools above (display name: 协同模式 / Collaboration Mode) |
 
 ## How it works
@@ -111,6 +113,21 @@ researcher#1 ── team_help ──►  main agent receives [team-relay]
       └──── team_message ◄────  looker#1 reports the answer
 ```
 
+## Images with a text-only main agent
+
+The composer's image-attachment path is gated by the current model's `inputModalities`: DeepSeek text-only routes declare no `image` modality, so pasted images are rejected at admission — `looker` or not. `tool-image-inbox` solves this INSIDE the policy, with a paste-as-usual experience:
+
+```
+Paste an image in a collaboration session
+  → an invisible client bridge intercepts the paste (no button, no UI)
+  → the image is stored as a workspace file (.dsh-inbox/)
+  → "[图片: <path>]" appears in the draft; press Enter
+  → the main agent routes the path to the vision tool or hires looker
+  → looker configured: normal image analysis; not configured: the agent hints how to set it up
+```
+
+Non-collaboration sessions and text-only pastes are untouched. Alternatives: drop the image into the workspace folder and name the path, or switch the session to a vision route (e.g. `zai` / `glm-5v-turbo`) and paste natively.
+
 ## The specialist roster
 
 Ten pre-defined identities, each with its own specialty. The tool surface is tiered by duty: research-type identities get read-only tools, execution identities get shell/file/skill tools, visual identities get read + vision.
@@ -136,6 +153,7 @@ packages/
   tools/tool-team/               team_call dispatch + roundtable
   tools/tool-model-compare/      Same-prompt model comparison
   tools/tool-vision/             Multimodal vision bridge
+  tools/tool-image-inbox/        Invisible image-paste bridge for text-only mains
 config/
   agent-presets/collaboration/   Ready-to-use agent preset
 docs/                            Installation & usage guide
@@ -146,20 +164,22 @@ scripts/                         Validation scripts
 
 > Full guide: [docs/installation.md](docs/installation.md).
 
-1. **Install the four packages** into the DSH profile workspace:
+1. **Install the five packages** into the DSH profile workspace:
 
    ```powershell
-   pnpm add -w @dsh-collaboration/team @dsh-collaboration/tool-team @dsh-collaboration/tool-model-compare @dsh-collaboration/tool-vision
+   pnpm add -w @dsh-collaboration/team @dsh-collaboration/tool-team @dsh-collaboration/tool-model-compare @dsh-collaboration/tool-vision @dsh-collaboration/tool-image-inbox
    ```
 
    > Before npm publication, grab the `.tgz` assets from [Releases](https://github.com/Socialist-Sister/dsh-collaboration/releases).
 
-2. **Insert the roster host row** (`cordis.patch.yml`):
+2. **Insert the host rows** (`cordis.patch.yml`):
 
    ```yaml
    - insert:
        - id: collaboration-team
          name: '@dsh-collaboration/team'
+       - id: collaboration-image-inbox
+         name: '@dsh-collaboration/tool-image-inbox'
    ```
 
 3. **Add model providers** via the official Settings → Models → Add provider card:

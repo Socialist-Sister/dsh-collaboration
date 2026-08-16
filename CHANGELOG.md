@@ -2,6 +2,21 @@
 
 本文件记录 dsh-collaboration 各版本的变更（遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 精神）。
 
+## [v0.5.0] - Unreleased
+
+### 新增：图片收件箱（隐形粘贴桥——纯文本主模型直接粘贴图片）
+
+- **新包 `@dsh-collaboration/tool-image-inbox` 0.2.0（host+client 双面，无任何可见 UI）**：
+  - 客户端隐形桥：window capture 层拦截图片粘贴（协同模式会话内），图片经 `imageInbox/upload` 存成会话工作区文件（`.dsh-inbox/`），草稿自动插入 `[图片: <路径>]`；文本粘贴与非协同会话零干扰；上传失败把原因写进草稿。
+  - 宿主（`cordis.patch.yml` 新行 `collaboration-image-inbox`）：校验（20MB、媒体类型、文件名单路径段消毒）→ 落盘 → plugin 来源消息通知主代理（looker 已配置=路由指引 / 未配置=配置提示）；`capability` 端点按 `composedPreset === 'collaboration'` 决定是否拦截。
+  - **合规**：不碰 api-proxy 的 `inputModalities` 门槛、不谎报多模态——文本主模型只见路径文字。
+- **typert 第三方集成的三个根因（首版按钮崩溃的完整真相，均已修复）**：
+  1. 宿主网关 SRC 回退读的是**部署副本** typert-protocol 的模块内 WeakMap，第三方包的独立副本永远扫不到 `@Remote` 标记 → 宿主改为 `ctx.typert.register` 注册**严格 invocation**（zod 4 schema + `typeSymbol`，`typert` 进 inject）；
+  2. 客户端 contribution 每个 codec 必须带非空 `typeSymbol` 且 schema 是 **zod 4** 对象（网关要求 `.parse()`，schemastery 不行）；
+  3. 命名空间挂载后经 `ctx.get('remote.imageInbox')` 取服务（走 ctx 代理触发 inject 守卫）。
+- **验证**：宿主单测 28 项全绿（含 invocation 注册断言）；**临时 profile + 独立端口 + 真浏览器（Edge headless）端到端全绿**——boot 无错、粘贴拦截、路径入草稿、文件落盘、发送后主代理决策转交 looker、子代理启动、零失败请求。全程未触碰用户本机。
+- **文档**：双语 README 新增「纯文本主模型怎么收图」；包 README 记录 typert 集成要点与验证命令。
+
 ## [v0.4.1] - Unreleased
 
 ### 行为调教：协调者人设与派活流程（实测反馈）
