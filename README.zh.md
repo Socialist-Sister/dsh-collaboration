@@ -118,8 +118,8 @@ researcher#1 ── team_help ──►  主代理收到 [team-relay]
 |---|---|---|---|
 | `main` | 主代理 | 统筹全局：先分析任务结构、明确分工，再用 `team_call` 派活给专家；汇总报告、拍板决策 —— 不亲自动手执行专家的本职工作 | 全量会话工具（不单独雇佣） |
 | `planner` | 规划师 | 把复杂目标拆成可执行的步骤与里程碑，理清依赖、顺序与验收标准 | 只读：read/glob/grep/web_search |
-| `coder` | 工程师 | 写实现代码、落地功能、修缺陷，遵循项目现有风格与约定 | 执行：pwsh/read/write/edit/glob/grep/web_search/skill/todo_write |
-| `debugger` | 调试员 | 定位 bug：分析报错与日志，给出最小复现与修复方案 | 执行：pwsh/read/glob/grep/edit |
+| `coder` | 工程师 | 写实现代码、落地功能、修缺陷，遵循项目现有风格与约定 | 执行：shell（`bash`，Windows 为 `pwsh`）/read/write/edit/glob/grep/web_search/skill/todo_write |
+| `debugger` | 调试员 | 定位 bug：分析报错与日志，给出最小复现与修复方案 | 执行：shell（`bash`，Windows 为 `pwsh`）/read/glob/grep/edit |
 | `reviewer` | 审查员 | 审查代码与方案：找安全漏洞、边界条件、性能与可维护性风险 | 只读：read/glob/grep/web_search |
 | `researcher` | 研究员 | 检索资料、调研技术与竞品、核实事实，输出有出处的结论 | 只读：read/glob/grep/web_search |
 | `critic` | 评论家 | 独立视角挑刺：质疑假设、寻找盲点、模拟反对者，让方案更稳 | 只读：read/glob/grep/web_search |
@@ -146,9 +146,15 @@ scripts/                         验证脚本
 
 > 详细步骤见 [docs/installation.md](docs/installation.md)。
 
-1. **安装五个包**到 DSH profile workspace：
+1. **安装五个包**到 DSH profile workspace（在 profile 目录执行，如 `~/.dsh/profiles/web`）：
 
    ```powershell
+   # Windows
+   pnpm add -w @dsh-collaboration/team @dsh-collaboration/tool-team @dsh-collaboration/tool-model-compare @dsh-collaboration/tool-vision @dsh-collaboration/tool-image-inbox
+   ```
+
+   ```bash
+   # Linux / WSL —— 同一命令，在 profile 目录执行
    pnpm add -w @dsh-collaboration/team @dsh-collaboration/tool-team @dsh-collaboration/tool-model-compare @dsh-collaboration/tool-vision @dsh-collaboration/tool-image-inbox
    ```
 
@@ -174,7 +180,7 @@ scripts/                         验证脚本
    | OpenRouter | `openrouter` | `https://openrouter.ai/api/v1` | OpenAI 兼容 |
    | 硅基流动 | `siliconflow` | `https://api.siliconflow.cn/v1` | OpenAI 兼容 |
 
-4. **配置名册 + 预设**：`settings.yaml` 的 `collaboration-team` 段（示例见下）；复制 `config/agent-presets/collaboration` 到 `~/.dsh/.agent-presets/`。
+4. **配置名册 + 预设**：`settings.yaml` 的 `collaboration-team` 段（示例见下）；复制 `config/agent-presets/collaboration` 到 `~/.dsh/.agent-presets/`（Windows 为 `%USERPROFILE%\.dsh\.agent-presets\`）。
 
 5. **重启 DSH** → 新会话选择「协同模式」→ 开始使用。
 
@@ -220,6 +226,19 @@ node scripts/e2e-tools.mjs     # 新进程驱动工具包 apply()，复现预设
 node scripts/e2e-team-host.mjs # 驱动团队宿主服务：实例生命周期 + team_help 求助中转
 node scripts/check-roster.mjs  # 校验 settings.yaml 的 collaboration-team 名册
 ```
+
+### Docker 隔离 e2e（真浏览器 + 一次性 DSH 实例）
+
+```bash
+docker compose up --build --abort-on-container-exit e2e
+```
+
+在容器里启动一个**一次性 DSH web 实例**——整个 `DSH_HOME` 都在容器内
+（`/dsh-home`），绝不触碰真实 profile、会话存储或预设名册。同一容器随后
+运行宿主侧脚本 + image-inbox 粘贴桥的**浏览器端到端验证（Linux
+chromium）**（单容器是必须的：dsh web 只绑定 `127.0.0.1`；Windows 上同一
+脚本仍用系统 Edge，可用 `DSH_E2E_CHANNEL` 覆盖通道）。截图与控制台日志落在
+`.e2e-artifacts/`；退出码即 e2e 结果——CI 每次推送都会跑这个 job。
 
 ---
 

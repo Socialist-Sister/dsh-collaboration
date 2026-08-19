@@ -1,0 +1,16 @@
+# Keep the Docker build context lean: the image re-installs its own
+# node_modules (frozen lockfile) and needs only source + lockfiles.
+node_modules
+lib
+dist
+*.tsbuildinfo
+.git
+.gitignore
+dsh-agents-sessions.md
+.e2e-artifacts
+.dsh-inbox
+research
+*.log
+.env
+.env.local
+.DS_Store

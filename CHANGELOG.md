@@ -14,6 +14,13 @@
 
 ### 修复与调优（实测反馈）
 
+- **Docker 隔离 e2e（新增）**：`compose.yml` + `docker/e2e.Dockerfile` + `docker/e2e-entrypoint.sh`——单容器内一次性 DSH web 实例（DSH_HOME 全在容器内，绝不触碰真实 profile/会话存储/预设名册，默认预设设为 collaboration；dsh web 只绑定 127.0.0.1，故浏览器与实例必须同机），就绪后运行宿主侧三个脚本 + image-inbox 粘贴桥**真浏览器验证（Linux chromium）**。CI 新增 `docker-e2e` job，每次推送跑全套。
+- **bundle 清单（新增）**：根 `package.json` 声明 `dsh.bundle.patch → ./cordis.bundle.yml`（两个宿主行 insert），使仓库可作为 bundle 安装（`dsh plugin add github:Socialist-Sister/dsh-collaboration`），并满足 awesome-deepseek-harness-plugins 目录的静态审查门槛。
+- **verify-image-inbox.mjs 浏览器通道平台自适应**：原硬编码 `channel: 'msedge'`（Windows Edge），WSL/Linux 上无法运行。现改为 win32 默认 msedge、其他平台默认 `chromium`（Docker e2e 镜像内置），`DSH_E2E_CHANNEL` 可覆盖；截图目录改为 `$DSH_E2E_DIR/shots`。
+- **WSL/Linux 移植修复（host:team）**：默认名册执行身份（coder/debugger）的 `toolFilter.allow` 原写死 `pwsh`——`tools.restrict` 对未知名**大声失败**，Linux/WSL 上雇佣这两个专家会直接报错。现改为平台自适应：`process.platform === 'win32' ? 'pwsh' : 'bash'`（与协同预设的 shell 行一致），Windows 用户行为不变。
+- **跨平台文件名消毒修复（tool-image-inbox）**：`sanitizeName` 在 POSIX 主机上收到 Windows 风格路径（`..\..\evil.png`）时，`basename` 不按 `\` 切分，反斜杠转下划线后名字残留 `..` 字符。现先归一化 `\` → `/` 再取 basename，全平台行为一致；e2e 断言（名字不含 `..`）在 Linux 上通过。
+- **check-roster.mjs 路径修复**：原硬编码 `C:/Users/ZengYiming/.dsh/settings.yaml`，改为 `$DSH_SETTINGS` → `$DSH_HOME/settings.yaml` → 平台默认（POSIX `~/.dsh`、Windows `%USERPROFILE%\.dsh`）的解析顺序。
+- **文档**：README/README.zh/docs 的安装步骤补充 Linux/WSL（bash）命令与 `~/.dsh` 路径约定；名册工具面表格注明 shell 按平台自适应。
 - **路由指引重排（tool-image-inbox 0.2.1）**：looker 已配置时，注入消息改为**优先 team_call 雇佣 looker**（视觉分析是它的本职工作），vision 工具降为快速备选——此前 vision 在前，若 vision 的预设配置指向未添加的供应商（如示例 zhipu），主代理会先失败再降级到 looker。e2e 增加「looker 先于 vision」顺序断言。
 - **预设注释**：仓库预设 tool-vision 行注明 provider/model 必须指向实际添加的视觉供应商（示例 zhipu 仅示意）。
 - **用户本机预设副本**：tool-vision 改指 `zai/glm-5v-turbo`、model-compare 的 GLM 条目改指 `zai/glm-5.2` 与 `zai/glm-5v-turbo`（本机未添加 zhipu）。

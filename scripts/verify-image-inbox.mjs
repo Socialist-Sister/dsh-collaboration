@@ -6,8 +6,10 @@
  *   --send   after the paste assertion, actually submit and wait for the
  *            main agent to route the image (real API calls, slower).
  *
- * Drives the system Edge via playwright-core (channel: msedge, headless).
- * Screenshots land in %TEMP%\dsh-inbox-e2e\shots.
+ * Browser: the system Edge (channel: msedge) on Windows; the bundled
+ * chromium channel everywhere else (the Docker e2e image installs it).
+ * Override with DSH_E2E_CHANNEL (e.g. 'chromium', 'msedge', 'chrome').
+ * Screenshots land in $DSH_E2E_DIR/shots (default %TEMP%\dsh-inbox-e2e).
  */
 import { chromium } from 'playwright-core'
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs'
@@ -30,7 +32,10 @@ const assert = (cond, label) => {
   }
 }
 
-const browser = await chromium.launch({ channel: 'msedge', headless: true })
+const browser = await chromium.launch({
+  channel: process.env.DSH_E2E_CHANNEL || (process.platform === 'win32' ? 'msedge' : 'chromium'),
+  headless: true,
+})
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN' })
 const page = await context.newPage()
 
@@ -84,21 +89,27 @@ try {
   assert(bootFailures.length === 0, `web boot clean (${bootFailures.length} boot errors)`)
   assert(pageErrors.length === 0, `no page errors (${pageErrors.length})`)
 
-  // ── dismiss any onboarding/welcome overlay ─────────────────────────
-  const dismissButtons = page.locator('button', { hasText: /继续|知道了|关闭|好的|Got it|Continue|Close/ })
-  for (let i = 0; i < (await dismissButtons.count()); i++) {
-    const btn = dismissButtons.nth(i)
-    if (await btn.isVisible().catch(() => false)) {
-      try {
-        await btn.click({ timeout: 3000 })
-        console.log(`  dismissed overlay via button: ${(await btn.textContent())?.trim()}`)
-        break
-      } catch {
-        /* try the next candidate */
+  // ── dismiss any onboarding/welcome/API-key overlay ──────────────────
+  // Fresh instances may show a first-run API-key modal ("稍后配置" /
+  // "Save and continue") that keeps the composer inert — dismiss it, and
+  // repeat after opening a session, since some modals only appear then.
+  const dismissOverlays = async () => {
+    const dismissButtons = page.locator('button', { hasText: /继续|知道了|关闭|好的|稍后配置|跳过|Got it|Continue|Close|Skip/ })
+    for (let i = 0; i < (await dismissButtons.count()); i++) {
+      const btn = dismissButtons.nth(i)
+      if (await btn.isVisible().catch(() => false)) {
+        try {
+          await btn.click({ timeout: 3000 })
+          console.log(`  dismissed overlay via button: ${(await btn.textContent())?.trim()}`)
+          break
+        } catch {
+          /* try the next candidate */
+        }
       }
     }
+    await page.waitForTimeout(800)
   }
-  await page.waitForTimeout(800)
+  await dismissOverlays()
 
   // ── create a workspace through the same API the app uses (the native
   //    directory picker cannot be driven headlessly) ───────────────────
@@ -124,6 +135,7 @@ try {
   if ((await newSession.count()) > 0) {
     await newSession.click({ force: true })
     await page.waitForTimeout(2500)
+    await dismissOverlays()
     await shot('02-new-session')
   }
   await dumpUI('after new session')

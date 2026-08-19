@@ -9,6 +9,11 @@
   "engines": {
     "node": ">=20"
   },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.bundle.yml"
+    }
+  },
   "scripts": {
     "build": "pnpm -r --if-present build",
     "typecheck": "pnpm -r --if-present typecheck",

@@ -11,3 +11,12 @@ research/
 
 # image-inbox uploads (transient paste artifacts)
 .dsh-inbox/
+
+# docker e2e artifacts (screenshots, console dumps)
+.e2e-artifacts/
+
+# local session archive export (user data, not project source)
+dsh-agents-sessions.md
+
+# temporary catalog-entry staging (belongs to the awesome list repo, not this one)
+.tmp-catalog/

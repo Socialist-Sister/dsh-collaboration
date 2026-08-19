@@ -71,6 +71,16 @@ export interface TeamAgent {
 }
 
 /**
+ * Shell tool name for the current platform — `pwsh` on Windows, `bash`
+ * everywhere else (matches the collaboration preset's own platform split:
+ * `tool-pwsh` is enabled only on win32, `tool-bash` elsewhere). The roster
+ * pins it into the execution identities' `toolFilter`; `tools.restrict`
+ * fails loudly on unknown names, so hardcoding one platform's shell here
+ * would break the other platform entirely.
+ */
+export const SHELL_TOOL = process.platform === 'win32' ? 'pwsh' : 'bash'
+
+/**
  * The default roster. `main` is the session's own agent; every identity
  * with an EMPTY provider/model FOLLOWS the session's model (the chat-box
  * selector) — pinning one in settings.yaml gives that identity its own
@@ -98,7 +108,7 @@ export const DEFAULT_ROSTER: readonly TeamAgent[] = [
     role: '编写实现代码、落地功能、修复缺陷，遵循项目现有风格与约定。',
     provider: 'deepseek-official',
     model: 'deepseek-v4-flash',
-    toolFilter: { allow: ['pwsh', 'read', 'write', 'edit', 'glob', 'grep', 'web_search', 'skill', 'todo_write'] },
+    toolFilter: { allow: [SHELL_TOOL, 'read', 'write', 'edit', 'glob', 'grep', 'web_search', 'skill', 'todo_write'] },
   },
   {
     id: 'debugger',
@@ -106,7 +116,7 @@ export const DEFAULT_ROSTER: readonly TeamAgent[] = [
     role: '定位 bug、分析报错与日志、给出最小可复现与修复方案。',
     provider: 'deepseek-official',
     model: 'deepseek-v4-flash',
-    toolFilter: { allow: ['pwsh', 'read', 'glob', 'grep', 'edit'] },
+    toolFilter: { allow: [SHELL_TOOL, 'read', 'glob', 'grep', 'edit'] },
   },
   {
     id: 'reviewer',

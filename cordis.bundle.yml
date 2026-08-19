@@ -1,0 +1,15 @@
+# dsh-collaboration bundle patch (`dsh.bundle.patch` in the root package.json).
+#
+# Installing this repository as a bundle (`dsh plugin add github:Socialist-Sister/dsh-collaboration`)
+# applies the two host rows below to the profile composition — the same rows
+# the installation docs tell users to add to `cordis.patch.yml` manually.
+#
+# The agent-plane pieces (the `collaboration` preset with team_call /
+# roundtable / model_compare / vision / image-inbox) still come from the
+# preset directory: copy `config/agent-presets/collaboration` into
+# `~/.dsh/.agent-presets/` and start a session on the 协同模式 preset.
+- insert:
+    - id: collaboration-team
+      name: '@dsh-collaboration/team'
+    - id: collaboration-image-inbox
+      name: '@dsh-collaboration/tool-image-inbox'

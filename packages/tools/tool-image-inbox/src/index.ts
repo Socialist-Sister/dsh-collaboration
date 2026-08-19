@@ -143,8 +143,13 @@ export type CapabilityResult = { intercept: boolean }
 
 /** Keep the on-disk name inside one workspace-safe path segment. */
 function sanitizeName(rawName: string, mediaType: string): string {
+  // Normalize Windows-style separators first: `node:path`'s basename only
+  // splits on the host separator, so a `..\..\evil.png` submitted on a
+  // POSIX host would keep its backslashes and leak a literal `..` into the
+  // sanitized stem (the segment stays flat, but the test contract — and the
+  // defense in depth — require the dots to be gone on every platform).
   const stem =
-    basename(rawName)
+    basename(rawName.replace(/\\/g, '/'))
       .replace(/[^a-zA-Z0-9._\-\u4e00-\u9fff]/g, '_')
       .replace(/^\.+/, '')
       .slice(0, 80) || 'image'

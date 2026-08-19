@@ -1,0 +1,31 @@
+# Isolated e2e for dsh-collaboration.
+#
+# One container runs everything: a throwaway DSH web instance (its whole
+# DSH_HOME lives inside the container at /dsh-home — no real profile, session
+# store, or preset roster is ever touched, gap 3) plus the host-side
+# validation scripts and the browser verification of the image-inbox paste
+# bridge on a Linux chromium (gap 1; on Windows the same script keeps using
+# the system Edge).
+#
+# A single container is required because dsh web intentionally binds only
+# 127.0.0.1 — "--host 0.0.0.0" is rejected as a remote-code-execution risk —
+# so the browser must share the loopback with the instance.
+#
+# Usage:
+#   docker compose up --build --abort-on-container-exit e2e
+#
+#   The exit code is the e2e result. Screenshots / console dumps land in
+#   ./.e2e-artifacts/ on the host (mounted at $DSH_E2E_DIR=/e2e-shared).
+name: dsh-collaboration-e2e
+
+services:
+  e2e:
+    build:
+      context: .
+      dockerfile: docker/e2e.Dockerfile
+    environment:
+      DSH_HOME: /dsh-home
+      DSH_E2E_PORT: "3081"
+      DSH_E2E_DIR: /e2e-shared
+    volumes:
+      - ./.e2e-artifacts:/e2e-shared

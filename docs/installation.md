@@ -17,12 +17,18 @@ dsh-collaboration **不自带模型适配器**：模型供应商全部通过 DSH
 
 ## 1. 安装包到 profile workspace
 
-> **路径约定**：本文的 `${DSH_HOME}` 指 DSH 用户数据目录（Windows 下通常为 `%USERPROFILE%\.dsh`）；`profile workspace` 指 `${DSH_HOME}\profiles\<profile名>`（本机示例为 `${DSH_HOME}\profiles\web`）。
+> **路径约定**：本文的 `${DSH_HOME}` 指 DSH 用户数据目录——Windows 下通常为 `%USERPROFILE%\.dsh`，Linux/WSL 下为 `~/.dsh`；`profile workspace` 指 `${DSH_HOME}/profiles/<profile名>`（本机示例为 `${DSH_HOME}/profiles/web`）。下文命令同时给出 Windows（PowerShell）与 Linux/WSL（bash）写法，按你的平台选其一。
 > **发布到 npm 之前**，可以从 [Releases](https://github.com/Socialist-Sister/dsh-collaboration/releases) 下载 `.tgz` 附件，用本地路径安装（例如 `pnpm add -w ./downloads/dsh-collaboration-team-0.3.1.tgz ...`，版本号以最新 Release 为准）。发布后则直接用下方包名。
 
 在 profile 目录执行：
 
 ```powershell
+# Windows
+pnpm add -w @dsh-collaboration/team @dsh-collaboration/tool-team @dsh-collaboration/tool-model-compare @dsh-collaboration/tool-vision @dsh-collaboration/tool-image-inbox
+```
+
+```bash
+# Linux / WSL（在 profile 目录，如 ~/.dsh/profiles/web）
 pnpm add -w @dsh-collaboration/team @dsh-collaboration/tool-team @dsh-collaboration/tool-model-compare @dsh-collaboration/tool-vision @dsh-collaboration/tool-image-inbox
 ```
 
@@ -30,7 +36,7 @@ profile workspace 使用 `nodeLinker: hoisted`，包与其依赖会被提升到 
 
 ## 2. 在 `cordis.patch.yml` 插入名册宿主行
 
-编辑 `%USERPROFILE%\.dsh\profiles\web\cordis.patch.yml`：
+编辑 `${DSH_HOME}/profiles/web/cordis.patch.yml`（Windows：`%USERPROFILE%\.dsh\profiles\web\cordis.patch.yml`）：
 
 ```yaml
 - insert:
@@ -62,7 +68,7 @@ profile workspace 使用 `nodeLinker: hoisted`，包与其依赖会被提升到 
 
 ## 4. 配置专家名册（settings.yaml）
 
-配置文件位置：`${DSH_HOME}\settings.yaml`（与 `.credentials.yaml` 同级）。`team` 行提供默认名册（主代理/规划师/工程师/调试员/审查员/研究员/评论家/写手 + 未配置的观察员/画家）。在 `collaboration-team` 段整体替换，**改完即生效**：
+配置文件位置：`${DSH_HOME}/settings.yaml`（与 `.credentials.yaml` 同级）。`team` 行提供默认名册（主代理/规划师/工程师/调试员/审查员/研究员/评论家/写手 + 未配置的观察员/画家）。在 `collaboration-team` 段整体替换，**改完即生效**：
 
 ```yaml
 collaboration-team:
@@ -77,13 +83,21 @@ collaboration-team:
 - `provider` 填**第 3 步创建的供应商 ID**（如 `zhipu`）或 `deepseek-official`
 - `provider`/`model` **留空 = 跟随主模型**（聊天框右下角选择器选的模型）；想给某身份单独配模型才填
 - 视觉身份（观察员）建议配一个支持视觉的模型（如 `zhipu/glm-4v-flash`），否则它跟随纯文本主模型、看图时报错
+- 执行身份（工程师/调试员）默认名册的工具面按平台自适应：Linux/WSL 给 `bash`，Windows 给 `pwsh`（与协同预设的 shell 行一致），无需手动改
 
 ## 5. 安装「协同模式」预设（id: collaboration）
 
-把本仓库的 `config/agent-presets/collaboration` 目录复制到用户预设根（`${DSH_HOME}\.agent-presets\`）：
+把本仓库的 `config/agent-presets/collaboration` 目录复制到用户预设根（`${DSH_HOME}/.agent-presets/`）：
 
 ```powershell
+# Windows
 Copy-Item -Recurse <repo>\config\agent-presets\collaboration "$env:USERPROFILE\.dsh\.agent-presets\collaboration"
+```
+
+```bash
+# Linux / WSL
+mkdir -p ~/.dsh/.agent-presets
+cp -r <repo>/config/agent-presets/collaboration ~/.dsh/.agent-presets/
 ```
 
 > **注意**：复制安装的预设是**漂移快照**——仓库更新预设后需重新复制（或手工同步改动）。已有会话不受影响，新会话按重启时的副本挂载。

@@ -136,8 +136,8 @@ Ten pre-defined identities, each with its own specialty. The tool surface is tie
 |---|---|---|---|
 | `main` | 主代理 (Main agent) | Coordinates the whole effort: first analyzes the task structure and clarifies the division of labor, then dispatches via `team_call`; integrates specialist reports and makes the final call — never executes specialists' core work itself | Full session toolset (never hired as an instance) |
 | `planner` | 规划师 (Planner) | Splits complex goals into steps and milestones with dependencies, ordering, and acceptance criteria | Read-only: read/glob/grep/web_search |
-| `coder` | 工程师 (Engineer) | Writes production code, lands features, fixes defects; follows the project's existing style and conventions | Execution: pwsh/read/write/edit/glob/grep/web_search/skill/todo_write |
-| `debugger` | 调试员 (Debugger) | Hunts bugs: reads errors and logs, produces minimal reproductions and fix plans | Execution: pwsh/read/glob/grep/edit |
+| `coder` | 工程师 (Engineer) | Writes production code, lands features, fixes defects; follows the project's existing style and conventions | Execution: shell (`bash`, Windows: `pwsh`)/read/write/edit/glob/grep/web_search/skill/todo_write |
+| `debugger` | 调试员 (Debugger) | Hunts bugs: reads errors and logs, produces minimal reproductions and fix plans | Execution: shell (`bash`, Windows: `pwsh`)/read/glob/grep/edit |
 | `reviewer` | 审查员 (Reviewer) | Reviews code and designs for security holes, edge cases, performance, and maintainability risks | Read-only: read/glob/grep/web_search |
 | `researcher` | 研究员 (Researcher) | Researches technology, competitors, and facts; cites sources in its conclusions | Read-only: read/glob/grep/web_search |
 | `critic` | 评论家 (Critic) | Challenges assumptions, hunts blind spots, plays devil's advocate — hardens the plan before it ships | Read-only: read/glob/grep/web_search |
@@ -164,9 +164,15 @@ scripts/                         Validation scripts
 
 > Full guide: [docs/installation.md](docs/installation.md).
 
-1. **Install the five packages** into the DSH profile workspace:
+1. **Install the five packages** into the DSH profile workspace (from the profile dir, e.g. `~/.dsh/profiles/web`):
 
    ```powershell
+   # Windows
+   pnpm add -w @dsh-collaboration/team @dsh-collaboration/tool-team @dsh-collaboration/tool-model-compare @dsh-collaboration/tool-vision @dsh-collaboration/tool-image-inbox
+   ```
+
+   ```bash
+   # Linux / WSL — same command, run in the profile directory
    pnpm add -w @dsh-collaboration/team @dsh-collaboration/tool-team @dsh-collaboration/tool-model-compare @dsh-collaboration/tool-vision @dsh-collaboration/tool-image-inbox
    ```
 
@@ -192,7 +198,7 @@ scripts/                         Validation scripts
    | OpenRouter | `openrouter` | `https://openrouter.ai/api/v1` | OpenAI-compatible |
    | SiliconFlow | `siliconflow` | `https://api.siliconflow.cn/v1` | OpenAI-compatible |
 
-4. **Configure the roster + preset**: `collaboration-team` section in `settings.yaml` (see below); copy `config/agent-presets/collaboration` into `~/.dsh/.agent-presets/`.
+4. **Configure the roster + preset**: `collaboration-team` section in `settings.yaml` (see below); copy `config/agent-presets/collaboration` into `~/.dsh/.agent-presets/` (on Windows: `%USERPROFILE%\.dsh\.agent-presets\`).
 
 5. **Restart DSH** → start a new conversation on the Collaboration preset → done.
 
@@ -238,6 +244,21 @@ node scripts/e2e-tools.mjs     # drives each tool package's apply() in a fresh p
 node scripts/e2e-team-host.mjs # drives the team host service: instance lifecycle + team_help relay
 node scripts/check-roster.mjs  # validates the collaboration-team roster in settings.yaml
 ```
+
+### Isolated e2e in Docker (browser + throwaway DSH)
+
+```bash
+docker compose up --build --abort-on-container-exit e2e
+```
+
+Boots a **throwaway DSH web instance inside a container** — its whole `DSH_HOME`
+lives under `/dsh-home`, so no real profile, session store, or preset roster is
+ever touched. The same container then runs the host-side scripts plus the
+image-inbox paste-bridge **browser verification on a Linux chromium** (a single
+container is required because dsh web binds only `127.0.0.1`; on Windows the
+script keeps using the system Edge — override the channel with `DSH_E2E_CHANNEL`).
+Screenshots and console dumps land in `.e2e-artifacts/`. The exit code is the
+e2e result — CI runs this job on every push.
 
 ---
 

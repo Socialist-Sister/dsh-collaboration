@@ -29,3 +29,20 @@ jobs:
           fi
       - run: pnpm typecheck
       - run: pnpm build
+
+  docker-e2e:
+    # Isolated e2e in Docker: a throwaway DSH instance (own DSH_HOME in the
+    # container) + host-side scripts + the image-inbox paste-bridge browser
+    # verification on a Linux chromium. See compose.yml / docker/e2e.Dockerfile.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and run the isolated e2e
+        run: docker compose up --build --abort-on-container-exit e2e
+      - name: Upload e2e artifacts (screenshots, console dumps)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: .e2e-artifacts/
+          if-no-files-found: ignore
